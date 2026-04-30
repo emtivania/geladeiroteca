@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<!--
+  ===========================================================================
+  BibVania — login.html  |  Autenticação do Bibliotecário
+  ===========================================================================
+  PROPÓSITO
+    Página de login. Protege o painel administrativo (admin.html).
+    Não deve ser indexada por mecanismos de busca (robots: noindex).
+
+  FLUXO DE AUTENTICAÇÃO
+    1. Ao carregar: redirectIfLoggedIn() → se já há sessão ativa,
+       redireciona imediatamente para admin.html sem exibir a tela.
+    2. O body começa com visibility:hidden e só é exibido após a
+       checagem assíncrona de sessão (elimina flash da tela de login
+       para usuários já autenticados).
+    3. No submit: signIn(email, password) → se sucesso, pré-popula
+       localStorage com o nome do admin (bibvania_admin_nome) para
+       evitar flash do nome no admin.html após redirect.
+    4. Erros de rede são diferenciados de credenciais incorretas.
+
+  SEGURANÇA
+    • robots: noindex — página não aparece em buscas
+    • autocomplete: username / current-password — suporte a gerenciadores
+    • novalidate no <form> — validação controlada pelo script
+
+  ACESSIBILIDADE
+    • aria-required nos campos
+    • aria-live="assertive" na div de erros (anuncia erro imediatamente)
+    • Skip link para o formulário
+    • VLibras integrado
+
+  DEPENDÊNCIAS
+    • bibvania.js (ES Module + UMD fallback)
+    • style.css
+  ===========================================================================
+-->
+<html lang="pt-BR">
+<head>
+<script>function navegarCom(url){window.location.href=url;}</script>
+<script>
+    // Aplicar tema antes do CSS carregar — elimina flash claro→escuro
+    (function(){var t=localStorage.getItem('theme');if(t)document.documentElement.setAttribute('data-theme',t);})();
+    // Aplicar font-size salvo imediatamente
+</script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login — GELADEIROTECA ONLINE</title>
+    <meta name="author" content="EMTI MARIA VANIA">
+    <meta name="license" content="CC-BY 4.0">
+    <meta name="source" content="https://github.com/emtivania/geladeiroteca">
+    <meta name="version" content="1.3">
+    <meta name="year" content="2026">
+    <link rel="icon" type="image/png" href="favicon.png">
+    <!-- Preconnect: reduz latência de conexão com serviços externos -->
+    <link rel="preconnect" href="https://zkscdfqsqhxldxlmklum.supabase.co" crossorigin>
+    <link rel="dns-prefetch" href="https://zkscdfqsqhxldxlmklum.supabase.co">
+    <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+    <link rel="dns-prefetch" href="https://cdn.jsdelivr.net">
+    <meta name="description" content="Acesse o painel administrativo do GELADEIROTECA ONLINE para gerenciar o acervo da BIBLIOTECA MÓVEL DO(A) EMTI PROFESSORA MARIA VÂNIA FARIAS LINHARES.">
+    <meta name="robots" content="noindex, nofollow">
+    <meta name="theme-color" content="#2563eb">
+    <!-- Open Graph -->
+    <meta property="og:type" content="website">
+    <meta property="og:title" content="Login — GELADEIROTECA ONLINE">
+    <meta property="og:description" content="Acesse o sistema GELADEIROTECA ONLINE de gestão da BIBLIOTECA MÓVEL DO(A) EMTI PROFESSORA MARIA VÂNIA FARIAS LINHARES.">
+    <meta property="og:image" content="https://emtivania.github.io/geladeiroteca/og-image.png">
+    <meta property="og:url" content="https://emtivania.github.io/geladeiroteca/login.html">
+    <meta property="og:locale" content="pt_BR">
+<style>
+    /* CSS crítico — previne piscada de botões antes de style.css carregar */
+    :root{--primary:#2563eb;--success:#10b981;--danger:#ef4444;--bg:#f1f5f9;--card:#ffffff;--text:#1e293b;--text-light:#64748b;--border:#e2e8f0;--radius:12px;--font-size:16px}
+    [data-theme=dark]{--bg:#0f172a;--card:#1e293b;--text:#f1f5f9;--text-light:#94a3b8;--border:#334155}
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{background-color:var(--bg);color:var(--text);font-family:'Inter',system-ui,-apple-system,sans-serif;font-size:1rem;text-transform:uppercase}
+    .btn-block{width:100%;padding:1rem;border:none;border-radius:8px;font-weight:700;font-size:0.9rem;cursor:pointer}
+    .btn-primary{background:var(--primary);color:#fff}
+    .btn-danger{background:#ef4444;color:#fff}
+    .btn-outline{background:var(--card);border:1px solid var(--border);color:var(--text)}
+    .accessibility-bar{position:fixed;top:0;left:0;right:0;z-index:1000;background:var(--primary);display:flex;padding:0.4rem;gap:0.5rem;height:48px}
+    .control-btn{background:rgba(255,255,255,.2);border:none;color:#fff;width:36px;height:36px;border-radius:8px;cursor:pointer;font-weight:700;font-size:0.9rem}
+</style>
+    <link rel="stylesheet" href="style.css">
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "WebPage",
+      "name": "Login — GELADEIROTECA ONLINE",
+      "description": "Página de autenticação do GELADEIROTECA ONLINE de gerenciamento de BIBLIOTECA MÓVEL DO(A) EMTI PROFESSORA MARIA VÂNIA FARIAS LINHARES.",
+      "url": "https://emtivania.github.io/geladeiroteca/login.html",
+      "isPartOf": { "@type": "WebApplication", "name": "GELADEIROTECA ONLINE", "url": "https://emtivania.github.io/geladeiroteca/" },
+      "author": { "@type": "Person", "name": "emtivania", "url": "https://github.com/ruanolima" },
+      "inLanguage": "pt-BR"
+    }
+    </script>
+</head>
+<body style="min-height:100vh; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:1.5rem; padding-top:calc(48px + 1.5rem); visibility:hidden;">
+    <!-- Skip navigation -->
+    <a href="#loginForm" class="skip-link">Ir para o formulário de login</a>
+
+    <div class="accessibility-bar" role="toolbar" aria-label="GELADEIROTECA ONLINE">
+        <button class="control-btn" onclick="window.open('https://github.com/emtivania/geladeiroteca', '_blank')" style="width:auto;padding:0 0.75rem;text-align:left;" aria-label="Abrir repositório no GitHub">📁 REPOSITÓRIO</button>
+        <div style="flex:1;"></div>
+        <button class="control-btn" onclick="toggleDarkMode()" id="darkModeBtn" aria-label="Alternar modo escuro" aria-pressed="false">🌙</button>
+    </div>
+
+    <main class="login-box" aria-label="Página de login do bibliotecário">
+        <div style="margin-bottom: 2rem; display:flex; flex-direction:column; align-items:center; gap:0.4rem; text-align:center;">
+            <img src="logo.png" alt="Logo BibVania — BIBLIOTECA MÓVEL DO(A) EMTI PROFESSORA MARIA VÂNIA FARIAS LINHARES" style="height:72px; width:auto;" onerror="this.onerror=null;this.style.display='none';">
+            <h1 style="color: var(--primary); font-size: 1.25rem; line-height:1.3;">BIBVANIA ONLINE</h1>
+            <div id="nomeEscolaLogin" class="school-name" aria-label="BIBLIOTECA MÓVEL DO(A) EMTI PROFESSORA MARIA VÂNIA FARIAS LINHARES"><span>BIBLIOTECA MÓVEL DO(A) EMTI</span><span>PROFESSORA MARIA VÂNIA FARIAS LINHARES</span></div>
+            <p style="margin-top:0.75rem; font-size:0.8rem; color:var(--text-light); letter-spacing:0.08em; border-top:1px solid var(--border); padding-top:0.75rem; width:100%; text-align:center;">ÁREA DO BIBLIOTECÁRIO</p>
+        </div>
+
+        <form id="loginForm" style="text-align: left;" novalidate aria-label="Formulário de autenticação">
+            <div class="form-group">
+                <label for="email">E-MAIL</label>
+                <input type="email" id="email" name="email" placeholder="seu@email.com" required autocapitalize="none" autocorrect="off" autocomplete="username" aria-required="true" aria-describedby="emailHelp">
+            </div>
+            <div class="form-group">
+                <label for="password">SENHA</label>
+                <input type="password" id="password" name="password" placeholder="••••••••" required autocomplete="current-password" aria-required="true">
+            </div>
+            <button type="submit" class="btn-block btn-primary" style="margin-top: 1rem;">ENTRAR NO PAINEL</button>
+            <div id="loginError" aria-live="assertive" aria-atomic="true" role="alert" aria-live="assertive" style="color: var(--danger); font-size: 0.75rem; font-weight: bold; margin-top: 1rem; text-align: center;"></div>
+        </form>
+
+        <nav style="margin-top: 2rem; padding-top: 1.5rem; border-top: 1px solid var(--border);" aria-label="Navegação de retorno">
+            <button onclick="navegarCom('index.html')" class="btn-block btn-outline" style="background: none; border: 1px solid var(--border); color: var(--text-light);" aria-label="Voltar para a página de consulta do acervo">
+                ← VOLTAR PARA CONSULTA
+            </button>
+        </nav>
+    </main>
+
+    <!--
+    MÓDULO DO LOGIN (ES Module)
+    Importa DB de bibvania.js. Responsável por:
+      1. Verificar sessão existente e redirecionar se logado
+      2. Aplicar preferências de tema
+      3. Processar submit do formulário de login
+    -->
+    <script type="module">
+        import DB from './bibvania.js';
+        window.DB = DB;
+        let fontSize = parseInt(localStorage.getItem('fontSize')) || 16; if (fontSize === 18) { fontSize = 16; localStorage.setItem('fontSize', 16); }
+
+        
+
+        window.toggleDarkMode = () => {
+            const theme = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+            document.documentElement.setAttribute('data-theme', theme);
+            document.getElementById('darkModeBtn').innerText = theme === 'dark' ? '☀️' : '🌙';
+            localStorage.setItem('theme', theme);
+        };
+
+        function aplicarPreferencias() {
+            const savedTheme = localStorage.getItem('theme') || 'light';
+            document.documentElement.setAttribute('data-theme', savedTheme);
+            const btn = document.getElementById('darkModeBtn');
+            if (btn) btn.innerText = savedTheme === 'dark' ? '☀️' : '🌙';
+            document.documentElement.style.setProperty('--font-size', fontSize + 'px');
+            
+            const el = document.getElementById('nomeEscolaLogin');
+            if (el) el.innerHTML = '<span>BIBLIOTECA ESCOLAR DA EMTI</span><span>PROFESSORA MARIA VÂNIA FARIAS LINHARES</span>';
+        }
+
+        (async () => {
+            aplicarPreferencias();
+            // Verifica sessão: se logado, redireciona para admin.html imediatamente.
+            // Só revela o body se NÃO houver sessão (evita flash da tela de login).
+            await window.DB.redirectIfLoggedIn();
+            // Só revela se não foi redirecionado (sem sessão ativa)
+            document.body.style.visibility = 'visible';
+        })();
+
+        document.getElementById('loginForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            const errorDiv = document.getElementById('loginError');
+            
+            errorDiv.innerText = "AUTENTICANDO...";
+            
+            try {
+                const loginData = await window.DB.signIn(email, password);
+                // Pré-popular localStorage com nome do admin ANTES do redirect.
+                // O script inline de admin.html lê bibvania_admin_nome para exibir
+                // o nome do usuário imediatamente, sem esperar o módulo ES carregar.
+                // Pré-popular cache de perfil ANTES de redirecionar —
+                // evita piscar de botão no admin.html (script inline lê este valor)
+                try {
+                    const userId = loginData?.user?.id;
+                    if (userId) {
+                        const { data: adminData } = await window.DB.supabase
+                            .from('admins')
+                            .select('nome')
+                            .eq('id', userId)
+                            .maybeSingle();
+                        if (adminData?.nome) {
+                            localStorage.setItem('bibvania_admin_nome', adminData.nome);
+                        } else {
+                            localStorage.removeItem('bibvania_admin_nome');
+                        }
+                    }
+                } catch(_) { localStorage.removeItem('bibvania_admin_nome'); }
+                navegarCom('admin.html');
+            } catch (error) {
+                const isRede = error instanceof TypeError || (error.message || '').toLowerCase().includes('fetch') || (error.message || '').toLowerCase().includes('network');
+                errorDiv.innerText = isRede
+                    ? '📶 Internet instável? Verifique sua conexão e tente novamente.'
+                    : '❌ E-MAIL OU SENHA INCORRETOS.';
+            }
+        });
+    </script>
+    <div vw class="enabled"><div vw-access-button class="active"></div><div vw-plugin-wrapper><div class="vw-plugin-top-wrapper"></div></div></div>
+    <script src="https://vlibras.gov.br/app/vlibras-plugin.js"></script>
+    <script>new window.VLibras.Widget('https://vlibras.gov.br/app');</script>
+
+    <footer style="text-align:center;padding:1.5rem 1rem;font-size:0.7rem;color:var(--text-light);border-top:1px solid var(--border);margin-top:2rem;" aria-label="Rodapé">
+        <p>GELADEIROTECA ONLINE v1.3 &copy; 2026 <a href="https://github.com/emtivania" rel="author noopener" style="color:inherit;">EMTI MARIA VANIA</a> &mdash; <a href="https://creativecommons.org/licenses/by/4.0/deed.pt-br" rel="license noopener" style="color:inherit;">CC-BY 4.0</a> &mdash; <a href="https://github.com/emtivania/geladeiroteca" rel="noopener" style="color:inherit;">GitHub</a> &nbsp;|&nbsp; criado com <a href="bibmaker.html" target="_blank" rel="noopener" style="color:inherit;">BibMaker v1.3</a> &mdash; Construtor de Biblioteca Online da BibVania &nbsp;|&nbsp; BibVania v1.6 &copy; 2026 <a href="https://github.com/ruanolima" rel="author noopener" style="color:inherit;">Ruan Oliveira Lima</a> &mdash; <a href="https://creativecommons.org/licenses/by/4.0/" rel="license noopener" style="color:inherit;">CC-BY-4.0</a> &mdash; <a href="https://github.com/emtivania/bibvania" rel="noopener" style="color:inherit;">GitHub</a></p>
+    </footer>
+    <script src="bibvania.js"></script>
+</body>
+</html>

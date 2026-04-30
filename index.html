@@ -1,0 +1,790 @@
+<!DOCTYPE html>
+<!--
+  ===========================================================================
+  BibVania — index.html  |  Catálogo Público do Acervo
+  ===========================================================================
+  PROPÓSITO
+    Página pública, sem autenticação. Permite que qualquer visitante
+    pesquise o acervo da biblioteca, filtre por categoria, visualize
+    capas em lightbox e acesse tags de palavras-chave.
+
+  ARQUITETURA GERAL
+    • Carrega bibvania.js como ES Module (import DB) E como script UMD
+      no final do body (retrocompatibilidade com chamadas síncronas).
+    • Todo o estado da lista (todosLivros, filtros, paginação) fica em
+      variáveis locais dentro do bloco <script type="module">.
+    • Comunicação em tempo real via Supabase Realtime (onLivrosChange +
+      onEmprestimosChange) + intervalo de 60 s como fallback.
+
+  FLUXO DE INICIALIZAÇÃO
+    1. Script inline (head) aplica tema e font-size ANTES do CSS externo
+       carregar → elimina flash claro→escuro.
+    2. inicializar() → aplica preferências → carregarLivros().
+    3. carregarLivros(): busca getLivros() + getEmprestimosAtivos() em
+       paralelo; resolve capas diretamente de imagem_url; renderiza.
+    4. Realtime/setInterval disparam _buscarEAtualizar(false) que preserva
+       capas já resolvidas em memória.
+
+  FUNCIONALIDADES
+    • Busca textual: título, ISBN, autor, palavras-chave (#tag syntax)
+    • Filtro por categoria via <select>
+    • Busca por voz (Web Speech API, graceful degradation)
+    • Botão "✕ limpar busca"
+    • Carrossel paginado (1 livro/página) com swipe touch
+    • Lightbox ao clicar em capa com imagem
+    • Modo escuro (localStorage)
+    • VLibras (acessibilidade em Libras)
+    • Skip link WCAG 2.4.1
+
+  ACESSIBILIDADE
+    • role=banner, role=toolbar, aria-label em todos os controles
+    • aria-live="polite" na lista de livros
+    • Lightbox com focus trap e Escape para fechar
+    • Botões touch com touchstart listener (elimina delay 300ms)
+
+  DEPENDÊNCIAS EXTERNAS
+    • bibvania.js (mesmo diretório)
+    • style.css (mesmo diretório)
+    • vlibras.gov.br/app/vlibras-plugin.js (CDN externo)
+  ===========================================================================
+-->
+<html lang="pt-BR">
+<head>
+<script>function navegarCom(url){window.location.href=url;}</script>
+<script>
+    // Aplicar tema antes do CSS carregar — elimina flash claro→escuro
+    (function(){var t=localStorage.getItem('theme');if(t)document.documentElement.setAttribute('data-theme',t);})();
+    // Aplicar font-size salvo imediatamente
+</script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GELADEIROTECA ONLINE — BIBLIOTECA MÓVEL DO(A) EMTI PROFESSORA MARIA VÂNIA FARIAS LINHARES</title>
+    <meta name="author" content="EMTI MARIA VANIA">
+    <meta name="license" content="CC-BY 4.0">
+    <meta name="source" content="https://github.com/emtivania/geladeiroteca">
+    <meta name="version" content="1.3">
+    <meta name="year" content="2026">
+    <meta name="tipobib" content="escolar">
+    <meta name="tipolabel" content="BIBLIOTECA MÓVEL">
+    <meta name="versaobase" content="1.6">
+    <link rel="icon" type="image/png" href="favicon.png">
+    <!-- Preconnect: reduz latência de conexão com serviços externos -->
+    <link rel="preconnect" href="https://zkscdfqsqhxldxlmklum.supabase.co" crossorigin>
+    <link rel="dns-prefetch" href="https://zkscdfqsqhxldxlmklum.supabase.co">
+    <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+    <link rel="preconnect" href="https://vlibras.gov.br" crossorigin>
+    <link rel="dns-prefetch" href="https://cdn.jsdelivr.net">
+    <link rel="dns-prefetch" href="https://vlibras.gov.br">
+    <meta name="description" content="Pesquise e explore o acervo digital da BIBLIOTECA MÓVEL DO(A) EMTI PROFESSORA MARIA VÂNIA FARIAS LINHARES. Sistema GELADEIROTECA ONLINE.">
+    <meta name="robots" content="index, follow">
+    <meta name="theme-color" content="#2563eb">
+    <!-- Open Graph -->
+    <meta property="og:type" content="website">
+    <meta property="og:title" content="GELADEIROTECA ONLINE — BIBLIOTECA MÓVEL DO(A) EMTI PROFESSORA MARIA VÂNIA FARIAS LINHARES">
+    <meta property="og:description" content="Pesquise e explore o acervo digital da BIBLIOTECA MÓVEL DO(A) EMTI PROFESSORA MARIA VÂNIA FARIAS LINHARES.">
+    <meta property="og:image" content="https://emtivania.github.io/geladeiroteca/og-image.png">
+    <meta property="og:url" content="https://emtivania.github.io/geladeiroteca/">
+    <meta property="og:locale" content="pt_BR">
+<style>
+    /*
+     * CSS CRÍTICO (inline) — aplicado ANTES de style.css ser baixado.
+     * Define variáveis de tema (light e dark), reset básico, classes de botão
+     * e a barra de acessibilidade, evitando flash de layout não estilizado (FOUC).
+     */
+    :root{--primary:#2563eb;--success:#10b981;--danger:#ef4444;--bg:#f1f5f9;--card:#ffffff;--text:#1e293b;--text-light:#64748b;--border:#e2e8f0;--radius:12px;--font-size:16px}
+    [data-theme=dark]{--bg:#0f172a;--card:#1e293b;--text:#f1f5f9;--text-light:#94a3b8;--border:#334155}
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{background-color:var(--bg);color:var(--text);font-family:'Inter',system-ui,-apple-system,sans-serif;font-size:1rem;text-transform:uppercase}
+    .btn-block{width:100%;padding:1rem;border:none;border-radius:8px;font-weight:700;font-size:0.9rem;cursor:pointer}
+    .btn-primary{background:var(--primary);color:#fff}
+    .btn-danger{background:#ef4444;color:#fff}
+    .btn-outline{background:var(--card);border:1px solid var(--border);color:var(--text)}
+    .accessibility-bar{position:fixed;top:0;left:0;right:0;z-index:1000;background:var(--primary);display:flex;padding:0.4rem;gap:0.5rem;height:48px}
+    .control-btn{background:rgba(255,255,255,.2);border:none;color:#fff;width:36px;height:36px;border-radius:8px;cursor:pointer;font-weight:700;font-size:0.9rem;touch-action:manipulation;-webkit-tap-highlight-color:transparent;user-select:none;}
+</style>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <!-- Skip navigation — WCAG 2.4.1 -->
+    <a href="#conteudo-principal" class="skip-link">Ir para o conteúdo principal</a>
+
+    <div class="accessibility-bar" role="toolbar" aria-label="GELADEIROTECA ONLINE">
+        <button class="control-btn" onclick="window.open('https://github.com/emtivania/geladeiroteca', '_blank')" style="width:auto;padding:0 0.75rem;text-align:left;" aria-label="Abrir repositório no GitHub">📁 Repositório</button>
+        <button class="control-btn" onclick="window.open('bibmaker.html?aba=cadastro','_blank')" style="width:auto;padding:0 0.75rem;text-align:left;margin-right:auto;" aria-label="Criar sua própria biblioteca">📚 Crie sua Bib!</button>
+        <button class="control-btn" id="darkModeBtn" aria-label="Alternar modo escuro" aria-pressed="false">🌙</button>
+        <script>(function(){var t=localStorage.getItem('theme');var b=document.getElementById('darkModeBtn');if(b&&t==='dark'){b.innerText='☀️';b.setAttribute('aria-pressed','true');}})();</script>
+    </div>
+
+<header role="banner">
+        <img src="logo.png" alt="Logo BibVania — BIBLIOTECA MÓVEL DO(A) EMTI PROFESSORA MARIA VÂNIA FARIAS LINHARES" class="header-logo" onerror="this.onerror=null;this.style.display='none';">
+        <h1>GELADEIROTECA ONLINE</h1>
+        <div class="school-name" id="nomeEscolaExibicao" aria-label="BIBLIOTECA MÓVEL DO(A) EMTI PROFESSORA MARIA VÂNIA FARIAS LINHARES"><span>BIBLIOTECA MÓVEL DO(A) EMTI</span><span>PROFESSORA MARIA VÂNIA FARIAS LINHARES</span></div>
+    </header>
+
+    <div class="container">
+        <nav aria-label="Navegação principal">
+            <button onclick="irParaAdmin()" class="btn-block btn-primary">
+                <span aria-hidden="true">🔑</span> ÁREA DO BIBLIOTECÁRIO
+            </button>
+        </nav>
+
+        <main id="conteudo-principal">
+        <div class="card">
+            <div class="form-group">
+                <label for="filtroCategoriaPublico">CATEGORIA</label>
+                <select id="filtroCategoriaPublico" aria-label="Filtrar por categoria" style="width:100%;padding:0.5rem;font-size:0.95rem;border:1px solid var(--border);border-radius:6px;background:var(--card-bg);color:var(--text);cursor:pointer;">
+                    <option value="">TODOS (0)</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="buscaLivros">BUSCAR NO ACERVO</label>
+                <div class="search-voice-wrap">
+                    <input type="search" id="buscaLivros" placeholder="BUSCAR LIVRO..." aria-label="Buscar livros no acervo" autocomplete="off">
+                </div>
+            </div>
+            
+        </div>
+        <section id="listaLivros" aria-label="Lista de livros do acervo" aria-live="polite">
+            <div style="text-align:center;padding:2rem;color:var(--text-light);font-size:1.2rem;" role="status">CARREGANDO ACERVO...</div>
+        </section>
+        <div id="acervo-nav-wrapper"></div>
+        </main>
+    </div>
+
+    <!--
+    ==========================================================================
+    MÓDULO PRINCIPAL (ES Module) — lógica do catálogo público
+    ==========================================================================
+    Importa DB (Supabase), iniciarBuscaVoz e spanCategoria de bibvania.js.
+    Expõe window.DB para scripts inline e o script UMD carregado no final.
+    Contém: estado da lista, renderização, paginação/carrossel, capas,
+    filtros, busca, realtime, lightbox e navegação para o admin.
+    ==========================================================================
+    -->
+    <script type="module">
+        import DB, { iniciarBuscaVoz, spanCategoria } from './bibvania.js';
+        window.DB = DB;
+
+        let fontSize = parseInt(localStorage.getItem('fontSize')) || 16; if (fontSize === 18) { fontSize = 16; localStorage.setItem('fontSize', 16); }
+        // ── Estado global do catálogo ──────────────────────────────────────
+        let todosLivros = [];          // Array com todos os livros do banco (imutável entre renders)
+        let _acervoCarregado = false;  // true após primeiro carregamento completo (evita duplo load)
+        let idsAtrasadosCache = [];     // IDs de livros com empréstimo atrasado (destaque vermelho)
+        let empsAtivosCache = {};       // { livro_id → [emprestimos] } para badges de disponibilidade
+        // Collator instanciado uma vez — localeCompare inline é ~10x mais lento
+        // Collator instanciado uma vez — localeCompare inline é ~10x mais lento
+        // sensitivity: 'base' → ignora acentos e maiúsculas na ordenação
+        const _collator = new Intl.Collator('pt-BR', { sensitivity: 'base' });
+        // Cache da lista ordenada alfabeticamente — evita re-sort a cada render
+        // Invalidado sempre que todosLivros é substituído
+        let _livrosOrdenados = [];
+
+        // ── Preferências ───────────────────────────────────────────
+        const _FONT_LEVELS = [10, 12, 14, 16, 18];
+        
+
+        // Botões de acessibilidade — touchstart para eliminar delay 300ms no mobile
+        function _bindAccessBtn(id, fn) {
+            var btn = document.getElementById(id);
+            if (!btn) return;
+            btn.addEventListener('touchstart', function(e) { e.preventDefault(); fn(); }, { passive: false });
+            btn.addEventListener('click', fn);
+        }
+        _bindAccessBtn('darkModeBtn', function(){ toggleDarkMode(); });
+        // Clique em tag: preenche busca com #palavra-chave e filtra sem piscar
+        window.filtrarPorTag = (tag) => {
+            const input = document.getElementById('buscaLivros');
+            input.value = '#' + tag;
+            input.dispatchEvent(new Event('input'));
+            renderAcervo();
+        };
+
+        window.toggleDarkMode = () => {
+            const theme = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+            // Suprimir transition durante troca de tema — evita repaint lento de toda a página
+            document.documentElement.classList.add('no-theme-transition');
+            document.documentElement.setAttribute('data-theme', theme);
+            requestAnimationFrame(() => {
+                requestAnimationFrame(() => document.documentElement.classList.remove('no-theme-transition'));
+            });
+            const btn = document.getElementById('darkModeBtn');
+            btn.innerText = theme === 'dark' ? '☀️' : '🌙';
+            btn.setAttribute('aria-pressed', theme === 'dark' ? 'true' : 'false');
+            localStorage.setItem('theme', theme);
+        };
+        // Lê tema e font-size do localStorage e os aplica ao documento e ao botão de modo escuro.
+        function aplicarPreferencias() {
+            const t = localStorage.getItem('theme') || 'light';
+            document.documentElement.setAttribute('data-theme', t);
+            const btn = document.getElementById('darkModeBtn');
+            if (btn) { btn.innerText = t === 'dark' ? '☀️' : '🌙'; btn.setAttribute('aria-pressed', t === 'dark' ? 'true' : 'false'); }
+            document.documentElement.style.setProperty('--font-size', fontSize + 'px');
+        }
+
+        // ── Utilitários ────────────────────────────────────────────
+        function normalizar(str) {
+            return (str || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase();
+        }
+        // Retorna rótulo legível do perfil do leitor (ex: "Aluna, 7º ano, 7A") para exibição nos cards de empréstimo.
+        function obterRotuloGenero(sexo, turma, ano) {
+            if (['PROF/FUNC','PROFESSOR','FUNCIONARIO'].includes(turma)) return sexo === 'M' ? 'Funcionário' : 'Funcionária';
+            const anoLabel = ano >= 10 ? `EM ${ano - 9}º ano` : `${ano}º ano`;
+            return `${sexo === 'M' ? 'Aluno' : 'Aluna'}, ${anoLabel}, ${turma}`;
+        }
+        window.obterRotuloGenero = obterRotuloGenero;
+
+        // ── Accordion ──────────────────────────────────────────────
+
+        function _setLabelSemCapa(wrap) {
+            let lbl = wrap.querySelector('.book-cover-label');
+            if (!lbl) {
+                lbl = document.createElement('span');
+                lbl.className = 'book-cover-label';
+                lbl.setAttribute('aria-hidden', 'true');
+                wrap.insertBefore(lbl, wrap.firstChild);
+            }
+            lbl.innerHTML = 'SEM<br>CAPA';
+            lbl.style.fontSize = '9px';
+            lbl.style.display = '';
+        }
+
+        /**
+         * renderizarLivro(l, isAtrasado)
+         * Gera o HTML de um card de livro para o catálogo público.
+         * Aplica borda vermelha se o livro tiver empréstimo atrasado.
+         * Usa _idsComCapaCache para decidir o estado inicial da capa:
+         *   - 'sem'  → placeholder "SEM CAPA" imediatamente
+         *   - 'tem'  → img com src em branco; _injetarCapas preencherá via preload
+         *   - null   → "CARREGANDO CAPA" até _injetarCapas resolver
+         */
+        function renderizarLivro(l, isAtrasado) {
+            const borderStyle = isAtrasado ? 'style="border-color:var(--danger); border-width: 2px;"' : '';
+
+            let wrapClasses, labelHtml;
+            if (!l._capaResolvida) {
+                if (_idsComCapaCache && !_idsComCapaCache.has(l.id)) {
+                    l._capaResolvida = 'sem';
+                    l.imagem_url = null;
+                    wrapClasses = 'book-cover-wrap sem-capa capa-carregada';
+                    labelHtml = '<span class="book-cover-label" aria-hidden="true">SEM<br>CAPA</span>';
+                } else {
+                    wrapClasses = 'book-cover-wrap';
+                    labelHtml = '<span class="book-cover-label" aria-hidden="true">CARREGANDO<br>CAPA</span>';
+                }
+            } else if (l._capaResolvida === 'tem') {
+                wrapClasses = l.imagem_url ? 'book-cover-wrap has-image capa-carregada' : 'book-cover-wrap capa-carregada';
+                labelHtml = '';
+            } else {
+                wrapClasses = 'book-cover-wrap sem-capa capa-carregada';
+                labelHtml = '<span class="book-cover-label" aria-hidden="true">SEM<br>CAPA</span>';
+            }
+
+            return `
+                <article class="book-item" ${borderStyle}>
+                    <div class="book-header">
+                        <div class="${wrapClasses}" data-lightbox-id="${l.id}" data-livro-id="${l.id}" data-lightbox-titulo="${l.titulo.replace(/"/g, '&quot;')}">
+                            ${labelHtml}
+                            <img class="cover-img" src="${l._capaResolvida === 'tem' && l.imagem_url ? l.imagem_url : ''}" alt="Capa: ${l.titulo.replace(/"/g,'&quot;')}">
+                        </div>
+                        <div class="book-header-inner">
+                            <div class="book-title">${l.titulo}</div>
+                            <div class="book-meta-box">
+                                <div class="book-meta-item book-meta-single meta-autor"><strong>AUTOR:</strong> ${l.autor || 'NÃO INFORMADO'}</div>
+                                <div class="book-meta-item book-meta-single"><strong>ISBN:</strong> ${l.isbn || 'N/A'}</div>
+                                <div class="book-meta-item book-meta-single meta-categoria"><strong>CAT.:</strong> ${spanCategoria(l.categoria)}</div>
+                                <div class="book-meta-item book-meta-single"><strong>DOWNLOAD:</strong> ${l.pdf_url ? `<a href="${l.pdf_url}" target="_blank" rel="noopener" onclick="event.stopPropagation()" style="color:var(--primary);font-weight:700;text-decoration:none;">BAIXAR PDF</a>` : ''}</div>
+                            </div>
+                            <div class="book-status-row stacked">
+                                <div class="book-tags-inline">
+                                    ${l.palavras_chave && l.palavras_chave.length ? l.palavras_chave.map(p => `<span class="tag-keyword" onclick="event.stopPropagation();filtrarPorTag('${p}')">#${p}</span>`).join(' ') : ''}
+                                </div>
+                                <div class="book-status-badge-row">
+                                    <span style="background:${l.quantidade_disponivel > 0 ? '#bbf7d0' : '#fecaca'};color:${l.quantidade_disponivel > 0 ? '#14532d' : '#7f1d1d'};font-weight:700;padding:0 0.15em;border-radius:2px;font-size:0.68rem;">${l.quantidade_disponivel}/${l.quantidade_total} DISPONÍVEIS</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </article>`;
+        }
+
+        // Token de renderização
+        let _renderToken = 0;
+        // _capaToken removido: cancelamento por renderToken é suficiente
+        let _idsComCapaCache = null;
+        // carrossel: sem sentinel observer
+
+        function _resolverCapas(livros) {
+            if (!_idsComCapaCache) return;
+            livros.forEach(l => {
+                if (!l._capaResolvida && !_idsComCapaCache.has(l.id)) {
+                    l._capaResolvida = 'sem';
+                    l.imagem_url = null;
+                }
+            });
+        }
+
+        // ── Estado do carrossel ────────────────────────────────────
+        let _paginaAtual = 0;
+        let _filtradosAtual = [];
+        const LOTE_CARROSSEL = 1;
+
+        // Retorna o número total de páginas do carrossel com base na lista filtrada atual.
+        function _totalPaginas() {
+            return Math.ceil(_filtradosAtual.length / LOTE_CARROSSEL);
+        }
+
+        // Navega para a página indicada (com wrap circular). Cancela se o token estiver obsoleto.
+        function _irParaPagina(pagina, token) {
+            if (token !== _renderToken) return;
+            const total = _totalPaginas();
+            if (total === 0) return;
+            _paginaAtual = ((pagina % total) + total) % total; // wrap circular
+            _renderPaginaAtual(token);
+            _atualizarNavCarrossel();
+        }
+
+        // Renderiza o lote de livros da página atual no DOM e injeta as capas em background.
+        function _renderPaginaAtual(token) {
+            if (token !== _renderToken) return;
+            const lista = document.getElementById('listaLivros');
+            const inicio = _paginaAtual * LOTE_CARROSSEL;
+            const lote = _filtradosAtual.slice(inicio, inicio + LOTE_CARROSSEL);
+
+            // Substituir conteúdo sem remover o nav
+            lista.innerHTML = '';
+
+            const frag = document.createDocumentFragment();
+            const tmp = document.createElement('div');
+            tmp.innerHTML = lote.map(l => renderizarLivro(l, false)).join('');
+            while (tmp.firstChild) frag.appendChild(tmp.firstChild);
+            lista.appendChild(frag);
+
+            // Nav fica fora da lista, no wrapper separado
+            const nav = document.getElementById('acervo-nav-carrossel');
+            const wrapper = document.getElementById('acervo-nav-wrapper');
+            if (nav && wrapper && !wrapper.contains(nav)) wrapper.appendChild(nav);
+
+            _injetarCapas(lote, token);
+            _prefetchCapasVizinhas(_paginaAtual, token);
+        }
+
+        // Atualiza o contador "X / Y" exibido no centro do nav do carrossel.
+        function _atualizarNavCarrossel() {
+            const nav = document.getElementById('acervo-nav-carrossel');
+            if (!nav) return;
+            const total = _totalPaginas();
+            const info = nav.querySelector('.carrossel-info');
+            if (info) info.textContent = `${_paginaAtual + 1} / ${total}`;
+        }
+
+        // Cria (ou recria) o elemento de navegação do carrossel com botões ◀ / ▶ e contador.
+        function _criarNavCarrossel(token) {
+            let nav = document.getElementById('acervo-nav-carrossel');
+            if (nav) nav.remove();
+            nav = document.createElement('div');
+            nav.id = 'acervo-nav-carrossel';
+            nav.style.cssText = 'display:flex;align-items:center;justify-content:center;gap:1rem;padding:0.5rem 0;pointer-events:none;flex-shrink:0;';
+
+            const btnPrev = document.createElement('button');
+            btnPrev.textContent = '◀';
+            btnPrev.setAttribute('aria-label', 'Página anterior');
+            btnPrev.style.cssText = 'background:var(--primary);color:#fff;border:none;border-radius:50%;width:2.6rem;height:2.6rem;font-size:1.1rem;cursor:pointer;flex-shrink:0;pointer-events:auto;box-shadow:0 2px 8px rgba(0,0,0,0.4);display:flex;align-items:center;justify-content:center;line-height:1;';
+            btnPrev.addEventListener('click', () => _irParaPagina(_paginaAtual - 1, _renderToken));
+
+            const info = document.createElement('span');
+            info.className = 'carrossel-info';
+            info.style.cssText = 'font-size:0.8rem;color:var(--text-light);min-width:4rem;text-align:center;pointer-events:auto;';
+            info.textContent = `1 / ${_totalPaginas()}`;
+
+            const btnNext = document.createElement('button');
+            btnNext.textContent = '▶';
+            btnNext.setAttribute('aria-label', 'Próxima página');
+            btnNext.style.cssText = 'background:var(--primary);color:#fff;border:none;border-radius:50%;width:2.6rem;height:2.6rem;font-size:1.1rem;cursor:pointer;flex-shrink:0;pointer-events:auto;box-shadow:0 2px 8px rgba(0,0,0,0.4);display:flex;align-items:center;justify-content:center;line-height:1;';
+            btnNext.addEventListener('click', () => _irParaPagina(_paginaAtual + 1, _renderToken));
+
+            nav.appendChild(btnPrev);
+            nav.appendChild(info);
+            nav.appendChild(btnNext);
+            return nav;
+        }
+
+        // Swipe horizontal
+        function _bindSwipe(el, token) {
+            let startX = 0, startY = 0, moved = false;
+            el.addEventListener('touchstart', e => {
+                startX = e.touches[0].clientX;
+                startY = e.touches[0].clientY;
+                moved = false;
+            }, { passive: true });
+            el.addEventListener('touchmove', e => { moved = true; }, { passive: true });
+            el.addEventListener('touchend', e => {
+                if (!moved) return;
+                const dx = e.changedTouches[0].clientX - startX;
+                const dy = e.changedTouches[0].clientY - startY;
+                if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 40) {
+                    _irParaPagina(dx < 0 ? _paginaAtual + 1 : _paginaAtual - 1, _renderToken);
+                }
+            }, { passive: true });
+        }
+
+        /**
+         * renderAcervo()
+         * Filtra todosLivros por termo de busca e categoria, ordena alfabeticamente
+         * (usando _collator), e aciona _renderPaginaAtual para o lote atual.
+         * Otimização: se o hash da lista filtrada não mudou (mesmo conjunto de IDs),
+         * apenas reinjeta as capas pendentes sem reescrever o DOM.
+         */
+        async function renderAcervo() {
+            const termo = normalizar(document.getElementById('buscaLivros').value);
+            const catFiltro = document.getElementById('filtroCategoriaPublico')?.value || '';
+
+            let filtrados = catFiltro ? todosLivros.filter(l => (l.categoria||'') === catFiltro) : todosLivros;
+            if (termo) {
+                const termoTag = termo.startsWith('#') ? termo.slice(1) : null;
+                filtrados = filtrados.filter(l =>
+                    termoTag
+                        ? (l.palavras_chave||[]).some(p => normalizar(p).includes(termoTag))
+                        : (normalizar(l.titulo).includes(termo) ||
+                           (l.isbn && l.isbn.toUpperCase().includes(termo)) ||
+                           (l.autor && normalizar(l.autor).includes(termo)) ||
+                           (l.palavras_chave||[]).some(p => normalizar(p).includes(termo)))
+                );
+            }
+
+            if (_livrosOrdenados.length === filtrados.length && !termo && !catFiltro) {
+                filtrados = _livrosOrdenados;
+            } else {
+                filtrados = [...filtrados].sort((a, b) => _collator.compare(a.titulo, b.titulo));
+            }
+
+            const lista = document.getElementById('listaLivros');
+            const token = ++_renderToken;
+
+            if (!filtrados.length) {
+                lista.innerHTML = '<p style="text-align:center;padding:2rem;color:var(--text-light);">NENHUM LIVRO ENCONTRADO.</p>';
+                return;
+            }
+
+            // Se mesma lista, só atualizar capas pendentes
+            const novoHash = filtrados.map(l => l.id).join(',');
+            if (lista.dataset.lastHtmlHash === novoHash) {
+                const inicio = _paginaAtual * LOTE_CARROSSEL;
+                _injetarCapas(filtrados.slice(inicio, inicio + LOTE_CARROSSEL), token);
+                return;
+            }
+            lista.dataset.lastHtmlHash = novoHash;
+            _filtradosAtual = filtrados;
+            _paginaAtual = 0;
+
+            // Criar nav e inserir na lista
+            lista.innerHTML = '';
+            _bindSwipe(lista, token);
+
+            _renderPaginaAtual(token);
+            // nav fica no wrapper separado, fora da lista
+            const nav = _criarNavCarrossel(token);
+            const _navWrapper = document.getElementById('acervo-nav-wrapper');
+            if (_navWrapper) _navWrapper.appendChild(nav);
+            _atualizarNavCarrossel();
+            _prefetchCapasVizinhas(0, token);
+        }
+
+        // Pré-carrega as capas dos livros vizinhos (anterior e próximo) em background.
+        // Usa new Image() para popular o cache do browser sem tocar no DOM.
+        function _prefetchCapasVizinhas(paginaAtual, token) {
+            if (token !== _renderToken) return;
+            const vizinhos = [-1, 1, -2, 2]; // ordem de prioridade: imediatos primeiro
+            const total = _filtradosAtual.length;
+            vizinhos.forEach(offset => {
+                const idx = ((paginaAtual + offset) % total + total) % total;
+                const livro = _filtradosAtual[idx];
+                if (!livro || !livro.imagem_url || livro._capaResolvida === 'sem') return;
+                // Só pré-carrega se ainda não está em cache
+                if (livro._capaResolvida === 'tem') return;
+                const img = new Image();
+                img.onload = () => {
+                    if (img.naturalWidth > 0 && img.naturalWidth === img.naturalHeight && img.naturalWidth <= 300) {
+                        livro._capaResolvida = 'sem'; livro.imagem_url = null;
+                        if (_idsComCapaCache) _idsComCapaCache.delete(livro.id);
+                    } else {
+                        livro._capaResolvida = 'tem';
+                    }
+                };
+                img.onerror = () => { livro._capaResolvida = 'sem'; livro.imagem_url = null; };
+                img.src = livro.imagem_url;
+            });
+        }
+
+
+        // Injeta capas diretamente na <img> do DOM — sem new Image() intermediário (evita piscada)
+        function _injetarCapas(lote, renderToken) {
+            lote.forEach(l => {
+                const wrap = document.querySelector(`[data-livro-id="${l.id}"]`);
+                if (!l.imagem_url || l._capaResolvida === 'sem') {
+                    l._capaResolvida = 'sem';
+                    if (wrap && !wrap.classList.contains('capa-carregada')) {
+                        wrap.classList.add('sem-capa', 'capa-carregada');
+                        _setLabelSemCapa(wrap);
+                    }
+                    return;
+                }
+                if (l._capaResolvida === 'tem' && wrap && wrap.classList.contains('capa-carregada')) return;
+                if (!wrap) return;
+                const img = wrap.querySelector('img.cover-img');
+                if (!img) return;
+                const url = l.imagem_url;
+                img.style.opacity = '0';
+                img.onload = () => {
+                    if (img.naturalWidth > 0 && img.naturalWidth === img.naturalHeight && img.naturalWidth <= 300) {
+                        l._capaResolvida = 'sem'; l.imagem_url = null;
+                        if (_idsComCapaCache) _idsComCapaCache.delete(l.id);
+                        img.style.opacity = '0';
+                        wrap.classList.add('sem-capa', 'capa-carregada');
+                        _setLabelSemCapa(wrap);
+                        return;
+                    }
+                    l._capaResolvida = 'tem';
+                    wrap.classList.remove('sem-capa');
+                    wrap.classList.add('has-image', 'capa-carregada');
+                    const lbl = wrap.querySelector('.book-cover-label');
+                    if (lbl) lbl.style.display = 'none';
+                    img.style.transition = 'opacity 0.25s ease';
+                    img.style.opacity = '1';
+                };
+                img.onerror = () => {
+                    l._capaResolvida = 'sem'; l.imagem_url = null;
+                    if (_idsComCapaCache) _idsComCapaCache.delete(l.id);
+                    wrap.classList.add('sem-capa', 'capa-carregada');
+                    _setLabelSemCapa(wrap);
+                };
+                img.src = url;
+            });
+        }
+
+        let _loadEmAndamento = false;
+
+        /**
+         * _buscarEAtualizar(forceReload)
+         * Núcleo do carregamento: busca getLivros() + getEmprestimosAtivos() no Supabase,
+         * resolve capas direto do imagem_url e renderiza. Preserva capas já resolvidas
+         * em memória (sem reload visual) quando forceReload=false.
+         * forceReload=true → descarta cache (bfcache pageshow, botão "Tentar novamente").
+         */
+        async function _buscarEAtualizar(forceReload) {
+            if (_loadEmAndamento) return;
+            _loadEmAndamento = true;
+            try {
+                // Preservar capas já resolvidas para não perder o estado visual
+                const capaCache = {};
+                if (!forceReload) {
+                    todosLivros.forEach(l => { if (l._capaResolvida) capaCache[l.id] = { url: l.imagem_url, res: l._capaResolvida }; });
+                }
+                const [livros, emps] = await Promise.all([
+                    window.DB.getLivros(),
+                    window.DB.getEmprestimosAtivos()
+                ]);
+                todosLivros = livros;
+                // getLivros() já traz imagem_url — resolver capas direto, sem requests extras
+                todosLivros.forEach(l => {
+                    l._capaResolvida = l.imagem_url ? 'tem' : 'sem';
+                });
+                _idsComCapaCache = new Set(todosLivros.filter(l => l.imagem_url).map(l => l.id));
+                // Restaurar capas já confirmadas pelo browser (evita re-fade desnecessário)
+                if (!forceReload) {
+                    todosLivros.forEach(l => {
+                        if (capaCache[l.id] && _idsComCapaCache.has(l.id)) {
+                            l.imagem_url = capaCache[l.id].url; l._capaResolvida = capaCache[l.id].res;
+                        }
+                    });
+                }
+                _livrosOrdenados = [...todosLivros].sort((a, b) => _collator.compare(a.titulo, b.titulo));
+                idsAtrasadosCache = [...new Set(emps.filter(e=>e.atrasado).map(e=>e.livro_id))];
+                empsAtivosCache = {};
+                emps.forEach(e => { (empsAtivosCache[e.livro_id]||(empsAtivosCache[e.livro_id]=[])).push(e); });
+                _acervoCarregado = true;
+                _popularCategoriasFiltro();
+                renderAcervo();
+            } catch(err) {
+                console.error('Erro ao carregar acervo:', err);
+                const msgErro = err?.message || JSON.stringify(err) || 'Erro desconhecido';
+                document.getElementById('listaLivros').innerHTML =
+                    '<div style="text-align:center;padding:2rem;">' +
+                    '<p style="color:var(--danger);font-weight:bold;margin-bottom:1rem;">⚠️ ERRO AO CARREGAR ACERVO</p>' +
+                    '<p style="color:var(--text-light);font-size:0.85rem;margin-bottom:1rem;">Verifique sua conexão com a internet e tente novamente.</p>' +
+                    '<p style="font-size:0.75rem;color:var(--danger);background:var(--bg);padding:0.5rem;border-radius:6px;margin-bottom:1rem;word-break:break-all;">' + msgErro + '</p>' +
+                    '<button onclick="carregarLivros()" class="btn-block btn-primary" style="max-width:200px;margin:0 auto;">🔄 TENTAR NOVAMENTE</button>' +
+                    '</div>';
+            } finally {
+                _loadEmAndamento = false;
+            }
+        }
+
+        /**
+         * carregarLivros() [exposta em window para bfcache pageshow e botão "Tentar novamente"]
+         * Se dados já estão em memória, renderiza direto sem ir ao Supabase.
+         * Passa forceReload=true apenas quando chamada externamente (bfcache/erro).
+         */
+        window.carregarLivros = async function carregarLivros(forceReload) {
+            // Se já temos dados e não é reload forçado, renderizar direto — sem nova requisição
+            if (!forceReload && todosLivros.length > 0 && !_loadEmAndamento) {
+                _popularCategoriasFiltro();
+                renderAcervo();
+                return;
+            }
+            await _buscarEAtualizar(!!forceReload);
+        }
+
+        // ── Popular select de categorias (index público) ────────────
+        function _popularCategoriasFiltro() {
+            const sel = document.getElementById('filtroCategoriaPublico');
+            if (!sel || !todosLivros.length) return;
+            const cats = window.DB?.CATEGORIAS || [];
+            const contagem = {};
+            todosLivros.forEach(l => { if (l.categoria) contagem[l.categoria] = (contagem[l.categoria]||0)+1; });
+            const total = todosLivros.length;
+            sel.innerHTML = `<option value="">TODOS (${total})</option>` +
+                cats.filter(c => contagem[c]).map(c => `<option value="${c}">${c} (${contagem[c]})</option>`).join('');
+        }
+
+        // ── Inicialização ──────────────────────────────────────────
+        async function inicializar() {
+            aplicarPreferencias();
+
+            // Busca por voz
+            iniciarBuscaVoz(document.getElementById('buscaLivros'), () => renderAcervo());
+
+            // Botão X de limpar — aparece à esquerda do botão de voz
+            _iniciarBotaoLimpar(document.getElementById('buscaLivros'), renderAcervo);
+
+            // Listener de busca por texto
+            // BUG FIX #9: Adicionar debounce na busca do acervo público para melhorar performance
+            let _searchTimeoutPublic = null;
+            document.getElementById('buscaLivros').addEventListener('input', () => {
+                if (_searchTimeoutPublic) clearTimeout(_searchTimeoutPublic);
+                _searchTimeoutPublic = setTimeout(() => {
+                    renderAcervo();
+                }, 300); // 300ms debounce
+            });
+
+            // Listener do filtro de categoria
+            document.getElementById('filtroCategoriaPublico')?.addEventListener('change', () => renderAcervo());
+
+            // Realtime + interval (preservam capas já resolvidas em memória)
+            let _rt = null;
+            const debounce = () => { clearTimeout(_rt); _rt = setTimeout(() => _buscarEAtualizar(false), 300); };
+            window.DB.onLivrosChange(payload => {
+                const cols = payload?.new && payload?.old ? Object.keys(payload.new).filter(k=>payload.new[k]!==payload.old[k]) : null;
+                if (cols?.length === 1 && cols[0] === 'imagem_url') {
+                    // Capa alterada: invalidar cache de IDs e o registro em memória
+                    _idsComCapaCache = null;
+                    const id = payload.new?.id;
+                    if (id) { const l = todosLivros.find(x => x.id === id); if (l) { l._capaResolvida = null; l.imagem_url = null; } }
+                    debounce();
+                    return;
+                }
+                debounce();
+            });
+            window.DB.onEmprestimosChange(debounce);
+            setInterval(debounce, 60000);
+
+            await carregarLivros();
+        }
+
+        // Cria botão "✕" dentro do campo de busca. Aparece quando há texto; limpa o input e aciona onClear ao clicar.
+        function _iniciarBotaoLimpar(inputEl, onClear) {
+            const wrap = inputEl.parentElement;
+            const btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = 'clear-btn';
+            btn.setAttribute('aria-label', 'Limpar busca');
+            btn.title = 'Limpar';
+            btn.innerHTML = '✕';
+            btn.style.display = 'none';
+            wrap.appendChild(btn);
+            const atualizar = () => { btn.style.display = inputEl.value ? 'flex' : 'none'; };
+            inputEl.addEventListener('input', atualizar);
+            btn.addEventListener('click', () => { inputEl.value = ''; atualizar(); inputEl.focus(); onClear(); });
+        }
+
+        window.irParaAdmin = async function() {
+            try {
+                const session = await window.DB.getSession();
+                navegarCom(session ? 'admin.html' : 'login.html');
+            } catch(e) {
+                navegarCom('login.html');
+            }
+        };
+
+        inicializar();
+
+        // Recarrega ao voltar de outra página (bfcache do navegador)
+        window.addEventListener('pageshow', (e) => {
+            if (e.persisted) carregarLivros(true);
+        });
+
+    </script>
+    <!--
+    Widget VLibras (vlibras.gov.br) — fornece interpretação em Língua Brasileira
+    de Sinais (Libras) para toda a página. Exigido por boas práticas de
+    acessibilidade para o público escolar brasileiro.
+    -->
+    <!-- VLibras — Libras accessibility widget -->
+    <div vw class="enabled" aria-label="Widget de acessibilidade em Libras" role="complementary">
+        <div vw-access-button class="active" aria-label="Abrir interpretação em Libras"></div>
+        <div vw-plugin-wrapper><div class="vw-plugin-top-wrapper"></div></div>
+    </div>
+    <script src="https://vlibras.gov.br/app/vlibras-plugin.js"></script>
+    <script>new window.VLibras.Widget('https://vlibras.gov.br/app');</script>
+
+    <!--
+    LIGHTBOX DE CAPA
+    Exibido ao clicar em um card com imagem (classe .has-image).
+    Acessível: foco movido para o botão "← VOLTAR" ao abrir;
+    Escape fecha; clique no fundo (overlay) fecha.
+    Não exibe para livros sem capa (evita lightbox vazio).
+    -->
+    <!-- Lightbox de capa -->
+    <div class="lightbox-overlay" id="capLightbox" role="dialog" aria-modal="true" aria-label="Visualizar capa ampliada">
+        <div class="lightbox-bg" onclick="fecharLightbox()"></div>
+        <div class="lightbox-img-wrap">
+            <img id="capLightboxImg" src="" alt="Capa ampliada">
+            <div class="lightbox-img-title" id="capLightboxTitle"></div>
+        </div>
+        <button class="lightbox-back" onclick="fecharLightbox()">← VOLTAR</button>
+    </div>
+    <footer style="text-align:center;padding:1.5rem 1rem;font-size:0.7rem;color:var(--text-light);border-top:1px solid var(--border);margin-top:2rem;" aria-label="Rodapé">
+        <p>GELADEIROTECA ONLINE v1.3 &copy; 2026 <a href="https://github.com/emtivania" rel="author noopener" style="color:inherit;">EMTI MARIA VANIA</a> &mdash; <a href="https://creativecommons.org/licenses/by/4.0/deed.pt-br" rel="license noopener" style="color:inherit;">CC-BY 4.0</a> &mdash; <a href="https://github.com/emtivania/geladeiroteca" rel="noopener" style="color:inherit;">GitHub</a> &nbsp;|&nbsp; criado com <a href="bibmaker.html" target="_blank" rel="noopener" style="color:inherit;">BibMaker v1.3</a> &mdash; Construtor de Biblioteca Online da BibVania &nbsp;|&nbsp; BibVania v1.6 &copy; 2026 <a href="https://github.com/ruanolima" rel="author noopener" style="color:inherit;">Ruan Oliveira Lima</a> &mdash; <a href="https://creativecommons.org/licenses/by/4.0/" rel="license noopener" style="color:inherit;">CC-BY-4.0</a> &mdash; <a href="https://github.com/emtivania/bibvania" rel="noopener" style="color:inherit;">GitHub</a></p>
+    </footer>
+    <script>
+        function fecharLightbox() {
+            const lb = document.getElementById('capLightbox');
+            lb.classList.remove('open');
+            // Devolver foco ao elemento que abriu o lightbox
+            if (lb._opener) { lb._opener.focus(); lb._opener = null; }
+        }
+        document.addEventListener('keydown', e => { if (e.key === 'Escape') fecharLightbox(); });
+
+        document.addEventListener('click', e => {
+            const wrap = e.target.closest('.book-cover-wrap.has-image');
+            if (!wrap) return;
+            e.stopPropagation();
+            const src = wrap.querySelector('img') ? wrap.querySelector('img').src : null;
+            const titulo = wrap.dataset.lightboxTitulo || '';
+            if (!src) return;
+            const lb = document.getElementById('capLightbox');
+            const img = document.getElementById('capLightboxImg');
+            img.src = src;
+            img.alt = `Capa ampliada do livro: ${titulo}`;
+            document.getElementById('capLightboxTitle').textContent = titulo;
+            lb._opener = document.activeElement;
+            lb.classList.add('open');
+            // Mover foco para o botão fechar — acessibilidade de modal
+            setTimeout(() => { const btn = lb.querySelector('.lightbox-back'); if (btn) btn.focus(); }, 50);
+        }, true);
+    </script>
+    <script src="bibvania.js"></script>
+
+
+
+</body>
+</html>

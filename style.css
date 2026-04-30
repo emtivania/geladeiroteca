@@ -1,0 +1,1710 @@
+/**
+ * GELADEIROTECA ONLINE — style.css
+ * BIBLIOTECA MÓVEL DO(A) EMTI PROFESSORA MARIA VÂNIA FARIAS LINHARES
+ *
+ * @author  EMTI MARIA VANIA <https://github.com/emtivania>
+ * @version 1.3
+ * @year    2026
+ * @license CC-BY 4.0
+ * @source  https://github.com/emtivania/geladeiroteca
+ *
+ * Derivado de: BibVania v1.6 por Ruan Oliveira Lima (https://github.com/emtivania/bibvania)
+ */
+
+:root {
+    --primary: #2563eb;
+    --primary-dark: #1d4ed8;
+    --success: #10b981;
+    --danger: #ef4444;
+    --warning: #f59e0b;
+    --bg: #f1f5f9;
+    --card: #ffffff;
+    --text: #1e293b;
+    --text-light: #64748b;
+    --border: #e2e8f0;
+    --radius: 12px;
+    --shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
+    --font-size: 16px;
+    /* Altura do card/capa — calculada para acomodar todos os campos sem cortar:
+       padding(1rem) + título(3×0.75rem×1.35) + autor(2×0.68rem×1.3)
+       + categoria(2×0.68rem×1.3) + isbn+download(2×0.68rem×1.3)
+       + tags(1×0.64rem×1.3) + badge(1×0.64rem×1.3) ≈ 11rem */
+    --cover-h: 11rem;
+}
+
+[data-theme="dark"] {
+    --bg: #0f172a;
+    --card: #1e293b;
+    --text: #f1f5f9;
+    --text-light: #94a3b8;
+    --border: #334155;
+    --shadow: 0 4px 6px -1px rgb(0 0 0 / 0.3);
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    -webkit-tap-highlight-color: transparent;
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    text-transform: uppercase;
+}
+
+/* Suprimir todas as transitions durante troca de tema — evita repaint global */
+.no-theme-transition *,
+.no-theme-transition *::before,
+/* Garante que pseudo-elementos também suprimam transições durante a troca de tema. */
+.no-theme-transition *::after {
+    transition: none !important;
+}
+
+html {
+    font-size: var(--font-size);
+}
+
+body {
+    background-color: var(--bg);
+    color: var(--text);
+    font-size: 1rem;
+    line-height: 1.5;
+    min-height: 100vh;
+}
+
+/* Acessibilidade */
+.accessibility-bar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 48px;
+    background: var(--primary);
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    padding: 0 1rem;
+    z-index: 1000;
+    gap: 0.5rem;
+}
+
+.control-btn {
+    position: relative;
+    background: rgba(255,255,255,0.2);
+    border: none;
+    color: white;
+    width: 36px;
+    height: 36px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    cursor: pointer;
+    font-size: 0.9rem;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+    user-select: none;
+    transition: opacity 0.1s ease;
+    overflow: hidden;
+    white-space: nowrap;
+    min-height: 36px;
+    max-height: 36px;
+    box-sizing: border-box;
+    line-height: 1;
+    padding-top: 0;
+    padding-bottom: 0;
+}
+
+.control-btn:active {
+    opacity: 0.7;
+}
+
+/* Layout Base */
+header {
+    margin-top: 48px;
+    background: var(--card);
+    padding: 1.25rem 1rem;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.4rem;
+    text-align: center;
+}
+
+.header-logo {
+    height: 72px;
+    width: auto;
+}
+
+header h1 {
+    font-size: 1.25rem;
+    color: var(--primary);
+    line-height: 1.2;
+}
+
+.school-name {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.1rem;
+    text-align: center;
+}
+
+.school-name span:first-child {
+    font-size: 0.9rem;
+    font-weight: 800;
+    color: var(--text);
+    letter-spacing: 0.03em;
+}
+
+.school-name span:last-child {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--text-light);
+    letter-spacing: 0.02em;
+}
+
+.container {
+    padding: 1rem;
+    max-width: 800px;
+    margin: 0 auto;
+}
+
+/* Navegação */
+nav {
+    display: flex;
+    justify-content: center;
+    margin-bottom: 1rem;
+}
+
+nav button, nav a {
+    padding: 0.75rem 1.5rem;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    color: var(--text);
+    text-decoration: none;
+    font-weight: 700;
+    font-size: 0.85rem;
+    text-align: center;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    box-shadow: var(--shadow);
+    width: auto;
+    min-width: 200px;
+}
+
+/* Cards */
+.card {
+    background: var(--card);
+    border-radius: var(--radius);
+    padding: 1.25rem;
+    box-shadow: var(--shadow);
+    margin-bottom: 1rem;
+    border: 1px solid var(--border);
+}
+
+.card h2 {
+    font-size: 1rem;
+    margin-bottom: 1rem;
+    color: var(--primary);
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+/* Formulários */
+.form-group {
+    margin-bottom: 1rem;
+}
+
+label {
+    display: block;
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: var(--text-light);
+    margin-bottom: 0.4rem;
+}
+
+input, select, textarea {
+    width: 100%;
+    padding: 0.8rem;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: var(--bg);
+    color: var(--text);
+    font-size: 1rem;
+    appearance: none;
+    text-transform: none;
+}
+
+input:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.1);
+}
+
+input:disabled {
+    background-color: #cbd5e1;
+    cursor: not-allowed;
+    opacity: 0.7;
+}
+
+[data-theme="dark"] input:disabled {
+    background-color: #334155;
+}
+
+/* Checkbox Personalizado Verde */
+.checkbox-container {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    cursor: pointer;
+    background: var(--bg);
+    padding: 0.8rem;
+    border-radius: 8px;
+    transition: all 0.2s ease;
+    border: 1px solid var(--border);
+}
+
+.checkbox-container.checked {
+    border-color: var(--success);
+    background: rgba(16, 185, 129, 0.1);
+    box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.2);
+}
+
+.checkbox-container input[type="checkbox"] {
+    width: 20px;
+    height: 20px;
+    accent-color: var(--success);
+    cursor: pointer;
+    appearance: auto;
+}
+
+.checkbox-container input[type="checkbox"]:checked {
+    accent-color: var(--success);
+}
+
+/* Radio buttons estilizados igual checkbox */
+.checkbox-container input[type="radio"] {
+    width: 20px;
+    height: 20px;
+    accent-color: var(--success);
+    cursor: pointer;
+    appearance: auto;
+}
+
+/* Botões de Ação */
+.btn-block {
+    width: 100%;
+    padding: 1rem;
+    border: none;
+    border-radius: 8px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: opacity 0.1s ease, transform 0.1s ease;
+    font-size: 0.9rem;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+    user-select: none;
+    will-change: opacity;
+}
+
+.btn-block:active {
+    opacity: 0.82;
+    transform: scale(0.98);
+}
+
+.btn-block:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none;
+    filter: grayscale(0.4);
+}
+
+.btn-primary { background: var(--primary); color: white; }
+/* Variantes de botão por semântica de ação. */
+.btn-success { background: var(--success); color: white; }
+.btn-danger { background: var(--danger); color: white; }
+.btn-outline { background: var(--card); border: 1px solid var(--border); color: var(--text); }
+
+/* ── Abas de navegação ─────────────────────────────── */
+.tabs-container {
+    display: flex;
+    justify-content: center;
+    margin-bottom: 0.75rem;
+    padding: 0.25rem;
+}
+
+#tab-select {
+    width: 100%;
+    max-width: 320px;
+    padding: 0.6rem 1rem;
+    border: 1.5px solid var(--border);
+    border-radius: 20px;
+    background: var(--card);
+    color: var(--text);
+    font-weight: 700;
+    font-size: 0.85rem;
+    cursor: pointer;
+    font-family: inherit;
+    text-align: center;
+    appearance: none;
+    -webkit-appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%2394a3b8' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 1rem center;
+    padding-right: 2.5rem;
+}
+
+.tab-content {
+    display: none;
+}
+
+.tab-content.active {
+    display: block;
+}
+
+/* ── CAPA DO LIVRO ─────────────────────────────────── */
+.book-cover-wrap {
+    width: 96px !important;
+    min-width: 96px !important;
+    max-width: 96px !important;
+    min-height: 148px;
+    align-self: stretch;
+    border-radius: 6px;
+    overflow: hidden;
+    border: 1px solid var(--border);
+    flex-shrink: 0 !important;
+    flex-grow: 0 !important;
+    position: relative;
+    /* Fundo cinza com logo desde o início — igual em todos os estados sem imagem */
+    background: #8b9aaa url('logo.png') center 35%/60% no-repeat;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px; /* isola do A+/A- do usuário */
+}
+
+[data-theme="dark"] .book-cover-wrap {
+    background: #3a4a5a url('logo.png') center 35%/60% no-repeat;
+}
+
+/* has-image: fundo some quando a imagem aparece */
+.book-cover-wrap.has-image {
+    background: #8b9aaa;
+}
+
+[data-theme="dark"] .book-cover-wrap.has-image {
+    background: #3a4a5a;
+}
+
+/* capa real — ocupa tudo quando visível */
+.book-cover-wrap img.cover-img {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: none;
+    z-index: 2;
+    transition: opacity 0.25s ease;
+}
+
+.book-cover-wrap.capa-carregada img.cover-img {
+    display: block;
+    opacity: 0;
+}
+
+.book-cover-wrap.has-image img.cover-img {
+    opacity: 1;
+}
+
+/* Fallback: se capa-carregada mas não has-image (sem capa), garante display:none */
+.book-cover-wrap.sem-capa img.cover-img {
+    display: none !important;
+}
+
+/* overlay removido — fundo cinza já é suficiente nos dois estados */
+
+/* texto centralizado */
+/* Label: idêntico nos dois estados — carregando e sem capa */
+.book-cover-label {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-end;
+    padding-bottom: 10px;
+    text-align: center;
+    font-size: 9px !important;
+    font-weight: 800;
+    color: #fff;
+    letter-spacing: 0.05em;
+    line-height: 1.5;
+    z-index: 1;
+    pointer-events: none;
+    text-shadow: 0 1px 4px rgba(0,0,0,0.5);
+}
+
+/* quando capa carregou: esconde overlay */
+.book-cover-wrap.capa-carregada::before { display: none; }
+/* esconde label SOMENTE quando tem imagem real — sem-capa mantém o label visível */
+.book-cover-wrap.has-image .book-cover-label { display: none; }
+
+/* ── Preview de capa no formulário de cadastro/edição ── */
+.cover-placeholder {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+    border-radius: 4px;
+    opacity: 0.35;
+}
+
+.book-header-inner {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+    flex: 1 1 0 !important;
+    min-width: 0;
+    min-height: 148px;
+    overflow: hidden;
+}
+
+.book-item {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    margin-bottom: 0.75rem;
+    overflow: hidden;
+    transition: border-color 0.1s ease;
+    display: flex;
+    flex-direction: row;
+    align-items: flex-start;
+    gap: 1rem;
+    padding: 1.25rem;
+}
+
+
+/* Keyframe de entrada suave para cards ao serem inseridos no DOM. */
+@keyframes bookFadeIn {
+    from { opacity: 0; transform: translateY(4px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+.book-item.fadein {
+    animation: bookFadeIn 0.15s ease forwards;
+}
+
+.book-header {
+    padding: 1.25rem;
+    display: flex !important;
+    flex-direction: row !important;
+    flex-wrap: nowrap !important;
+    gap: 1rem;
+    cursor: pointer;
+    position: relative;
+    align-items: stretch;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+    user-select: none;
+    border-bottom: 1px solid var(--border);
+}
+
+.book-title {
+    font-weight: 800;
+    font-size: 1.1rem;
+    color: var(--primary);
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+.book-meta-box {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    overflow: visible; /* BUG FIX #3: Permitir conteúdo fluir naturalmente */
+}
+
+.book-meta-item {
+    font-size: 0.8rem;
+    color: var(--text-light);
+    font-weight: 700;
+    word-break: break-word;
+    line-height: 1.3;
+}
+
+.book-meta-single {
+    white-space: normal;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: block;
+    max-width: 100%;
+}
+
+.book-meta-item strong {
+    color: var(--text);
+}
+
+.book-status-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+}
+
+/* Variante usada no index.html: tags + badge em linhas separadas */
+.book-status-row.stacked {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.25rem;
+}
+
+.book-status-badge-row {
+    display: flex;
+    justify-content: flex-start;
+    width: 100%;
+}
+
+.book-tags-inline {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.2rem;
+    min-width: 0;
+}
+
+/* ── Barra de ações do card (admin) — FORA do accordion para evitar conflito de clique ── */
+.book-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 0.5rem;
+    padding: 0.5rem 1.25rem 0.75rem;
+}
+
+.book-actions /* Tamanho mínimo de área de toque para botões pequenos — atende WCAG 2.5.5 (44×44px). */
+.btn-small {
+    width: 100%;
+    text-align: center;
+}
+
+.book-status-row .badge {
+    /* posição estática — flui dentro do book-header-inner */
+}
+
+.badge {
+    padding: 0.3rem 0.6rem;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    font-weight: 800;
+    white-space: nowrap;
+}
+
+.badge-disponivel { background: #dcfce7; color: #166534; }
+/* Badge vermelho para livro indisponível (quantidade_disponivel === 0). */
+.badge-indisponivel { background: #fee2e2; color: #991b1b; }
+
+/* BUG FIX #4: Quantidade disponível só no badge verde à direita */
+
+/* Botão Retrátil (Indicador) */
+.accordion-indicator {
+    position: absolute;
+    top: 1.25rem;
+    right: 1.25rem;
+    width: 24px;
+    height: 24px;
+    background: var(--bg);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.8rem;
+    font-weight: bold;
+    transition: transform 0.3s ease;
+    border: 1px solid var(--border);
+    color: var(--primary);
+}
+
+.accordion-indicator.active {
+    transform: rotate(180deg);
+    background: var(--primary);
+    color: white;
+}
+
+/* Detalhes do Livro */
+.book-details {
+    display: none;
+    background: var(--bg);
+    border-top: 1px solid var(--border);
+}
+
+.book-details > * {
+    padding: 1.25rem;
+}
+
+.book-details.active {
+    display: block;
+}
+
+
+/* Seção de Atrasados */
+.atrasados-section {
+    border: 2px solid var(--danger);
+    border-radius: var(--radius);
+    padding: 1rem;
+    margin-bottom: 1.5rem;
+    background: rgba(239, 68, 68, 0.05);
+}
+
+.atrasado-label {
+    color: var(--danger);
+    font-weight: 800;
+    font-size: 0.7rem;
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+}
+
+/* Login Overlay */
+#loginOverlay {
+    position: fixed;
+    inset: 0;
+    background: var(--bg);
+    z-index: 2000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1.5rem;
+}
+
+.login-box {
+    background: var(--card);
+    width: 100%;
+    max-width: 400px;
+    padding: 2rem;
+    border-radius: 20px;
+    box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.1);
+    text-align: center;
+}
+
+/* Footer */
+footer {
+    text-align: center;
+    padding: 2rem;
+    font-size: 0.7rem;
+    color: var(--text-light);
+    font-weight: 600;
+}
+
+/* Utilitários */
+.hidden { display: none !important; }
+
+@media (min-width: 600px) {
+    /* Tamanho do título principal no cabeçalho do admin. */
+header h1 { font-size: 1.75rem; }
+}
+
+/* ── Lightbox de capa ── */
+.book-cover-wrap.has-image {
+    cursor: zoom-in;
+    transition: transform 0.15s, box-shadow 0.15s;
+}
+/* Cursor pointer e leve escurecimento ao hover em capas clicáveis (abre lightbox). */
+.book-cover-wrap.has-image:hover {
+    transform: scale(1.06);
+    box-shadow: 0 4px 16px rgba(37,99,235,0.18);
+}
+
+.lightbox-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    z-index: 9999;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    padding: 1.5rem;
+    animation: lbFadeIn 0.2s ease;
+}
+/* Torna o lightbox visível — ativado via classList.add("open"). */
+.lightbox-overlay.open { display: flex; }
+
+.lightbox-bg {
+    position: absolute;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.85);
+    backdrop-filter: blur(4px);
+    cursor: zoom-out;
+}
+
+.lightbox-img-wrap {
+    position: relative;
+    z-index: 1;
+    max-width: min(360px, 90vw);
+    max-height: 75vh;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 24px 64px rgba(0,0,0,0.5);
+    animation: lbPopIn 0.22s cubic-bezier(0.34,1.56,0.64,1);
+}
+/* Imagem dentro do lightbox: tamanho máximo e object-fit para não distorcer. */
+.lightbox-img-wrap img {
+    display: block;
+    width: 100%;
+    max-height: 75vh;
+    object-fit: contain;
+}
+/* Título do livro exibido abaixo da capa no lightbox. */
+.lightbox-img-title {
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    background: linear-gradient(transparent, rgba(0,0,0,0.65));
+    color: white;
+    font-size: 0.78rem;
+    font-weight: 700;
+    padding: 1.5rem 1rem 0.75rem;
+    text-align: center;
+}
+
+.lightbox-back {
+    position: relative;
+    z-index: 1;
+    margin-top: 1rem;
+    background: white;
+    color: var(--primary);
+    border: none;
+    border-radius: 8px;
+    padding: 0.6rem 2rem;
+    font-size: 0.85rem;
+    font-weight: 800;
+    letter-spacing: 0.05em;
+    cursor: pointer;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.25);
+    transition: background 0.15s, transform 0.1s;
+}
+/* Feedback visual no botão "← VOLTAR" do lightbox. */
+.lightbox-back:hover { background: #eff6ff; transform: scale(1.03); }
+
+/* Keyframes do lightbox: lbFadeIn escurece o overlay; lbPopIn amplia a imagem do centro. */
+@keyframes lbFadeIn { from { opacity: 0 } to { opacity: 1 } }
+@keyframes lbPopIn {
+    from { transform: scale(0.85); opacity: 0; }
+    to   { transform: scale(1);    opacity: 1; }
+}
+
+/* btn-small — botões de ação dentro dos empréstimos */
+.btn-small {
+    padding: 0.45rem 0.75rem;
+    font-size: 0.8rem;
+    border-radius: 6px;
+    border: none;
+    cursor: pointer;
+    font-weight: 700;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+    user-select: none;
+    transition: opacity 0.1s ease;
+}
+/* Feedback de pressionar (scale down) para botões pequenos — melhora UX em touch. */
+.btn-small:active {
+    opacity: 0.75;
+}
+
+/* Esconde img de capa antes de ter src válido — especificidade alta para vencer qualquer display:block */
+.book-cover-wrap img.cover-img:not([src]),
+/* Oculta <img> com src vazio — evita ícone de imagem quebrada antes de _injetarCapas preencher o src. */
+.book-cover-wrap img.cover-img[src=""] {
+    display: none !important;
+}
+
+/* ══════════════════════════════════════════════════════════════
+   ACESSIBILIDADE W3C / WCAG 2.1 AA
+   ══════════════════════════════════════════════════════════════ */
+
+/* Skip link — pula direto para conteúdo principal */
+.skip-link {
+    position: absolute;
+    top: -100%;
+    left: 0;
+    background: var(--primary);
+    color: #fff;
+    padding: 0.75rem 1.25rem;
+    font-weight: 700;
+    font-size: 0.85rem;
+    z-index: 9999;
+    border-radius: 0 0 8px 0;
+    text-decoration: none;
+    transition: top 0.15s ease;
+}
+/* Torna o skip link visível apenas ao receber foco via teclado — WCAG 2.4.1. */
+.skip-link:focus {
+    top: 0;
+}
+
+/* Visually hidden — acessível por leitores de tela, invisível visualmente */
+.visually-hidden {
+    position: absolute !important;
+    width: 1px !important;
+    height: 1px !important;
+    padding: 0 !important;
+    margin: -1px !important;
+    overflow: hidden !important;
+    clip: rect(0,0,0,0) !important;
+    white-space: nowrap !important;
+    border: 0 !important;
+}
+
+/* Foco visível em todos os elementos interativos — WCAG 2.4.7 */
+:focus-visible {
+    outline: 3px solid var(--primary) !important;
+    outline-offset: 2px !important;
+    border-radius: 4px;
+}
+
+/* Botões e inputs não devem suprimir outline */
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+[tabindex]:focus-visible {
+    outline: 3px solid var(--primary) !important;
+    outline-offset: 2px !important;
+}
+
+/* Remover outline apenas quando não é foco via teclado */
+button:focus:not(:focus-visible),
+/* Remove outline apenas quando o foco NÃO é via teclado (mouse/touch) — preserva acessibilidade de teclado. */
+a:focus:not(:focus-visible) {
+    outline: none;
+}
+
+/* Alto contraste — respeitar preferência do sistema */
+@media (forced-colors: active) {
+    /* Em modo de alto contraste do sistema, força borda visível em botões que usam apenas cor para se distinguir. */
+.btn-primary, .btn-success, .btn-danger {
+        border: 2px solid ButtonText;
+    }
+    /* Em alto contraste, garante que badges de disponibilidade sejam legíveis independente de fundo colorido. */
+.badge-disponivel, .badge-indisponivel {
+        border: 1px solid ButtonText;
+    }
+}
+
+/* Reduzir animações para usuários sensíveis */
+@media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        transition-duration: 0.01ms !important;
+    }
+}
+
+/* Tamanho mínimo de área de toque — WCAG 2.5.5
+   Usando pseudo-elemento para ampliar área clicável SEM alterar tamanho visual */
+.btn-small {
+    position: relative;
+}
+.btn-small::after,
+.control-btn::after,
+/* Ponto indicador animado que aparece sobre o botão de voz durante a gravação (estado .ouvindo). */
+.voice-btn::after {
+    content: '';
+    position: absolute;
+    inset: -6px;
+}
+
+/* ══════════════════════════════════════════════════════════════
+   BUSCA POR VOZ
+   ══════════════════════════════════════════════════════════════ */
+/* Container flex do campo de busca com os botões de voz e limpar posicionados à direita dentro do input. */
+.search-voice-wrap {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+.search-voice-wrap input[type="text"],
+.search-voice-wrap input[type="search"] {
+    padding-right: 3rem;
+    width: 100%;
+}
+/* Dois botões visíveis: X + voz */
+.search-voice-wrap:has(.clear-btn[style*="flex"]) input {
+    padding-right: 5rem;
+}
+/* Botão "✕" de limpar busca: posicionado absolutamente dentro do .search-voice-wrap, à esquerda do botão de voz. */
+.clear-btn {
+    position: absolute;
+    right: 2.6rem;
+    top: 50%;
+    transform: translateY(-50%);
+    background: none;
+    border: none;
+    cursor: pointer;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-light);
+    font-size: 0.75rem;
+    font-weight: 700;
+    transition: color 0.15s, background 0.15s;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+    padding: 0;
+}
+.clear-btn:hover { background: var(--bg); color: var(--danger); }
+/* Suprimir botão X nativo do browser em input[type="search"] — usamos o nosso */
+input[type="search"]::-webkit-search-cancel-button,
+/* Remove o botão nativo de cancelar do input[type=search] no Chrome/Safari — usamos o nosso próprio .clear-btn. */
+input[type="search"]::-webkit-search-decoration { -webkit-appearance: none; appearance: none; }
+input[type="search"] { appearance: none; -webkit-appearance: none; }
+.voice-btn {
+    position: absolute;
+    right: 0.5rem;
+    top: 50%;
+    transform: translateY(-50%);
+    background: none;
+    border: none;
+    cursor: pointer;
+    width: 36px;
+    height: 36px;
+    min-height: 36px;
+    min-width: 36px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-light);
+    transition: color 0.15s, background 0.15s;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+    padding: 0;
+}
+.voice-btn:hover { background: var(--bg); color: var(--primary); }
+.voice-btn.ouvindo {
+    color: var(--danger);
+    animation: pulse-mic 1s infinite;
+}
+.voice-btn svg { width: 20px; height: 20px; flex-shrink: 0; }
+
+/* Keyframe de pulso do ponto indicador de gravação no botão de voz. */
+@keyframes pulse-mic {
+    0%, 100% { opacity: 1; transform: translateY(-50%) scale(1); }
+    50% { opacity: 0.6; transform: translateY(-50%) scale(1.15); }
+}
+
+/* ══════════════════════════════════════════════════════════════
+   CAMPO ALT TEXT MANUAL NO UPLOAD DE CAPA
+   ══════════════════════════════════════════════════════════════ */
+/* Grupo do campo de texto alternativo (alt text) da capa — exibido apenas quando uma imagem é selecionada. */
+.alt-text-group {
+    margin-top: 0.5rem;
+    animation: fadeInAlt 0.2s ease;
+}
+@keyframes fadeInAlt {
+    from { opacity: 0; transform: translateY(-4px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
+/* Respeitar preferência de cor do sistema quando não há preferência salva */
+@media (prefers-color-scheme: dark) {
+    :root:not([data-theme]) {
+        --bg: #0f172a;
+        --card: #1e293b;
+        --text: #f1f5f9;
+        --text-light: #94a3b8;
+        --border: #334155;
+    }
+}
+
+/* ══════════════════════════════════════════════════════════════
+   MODAL — acessibilidade e foco (WCAG 2.1)
+   ══════════════════════════════════════════════════════════════ */
+/* Overlay de modal: cobre toda a tela com fundo semitransparente, centralizando o conteúdo via flex. */
+.modal {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,.7);
+    z-index: 3000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+    overflow-y: auto;
+}
+.modal.hidden { display: none !important; }
+.modal-content {
+    background: var(--card);
+    width: 100%;
+    max-width: 500px;
+    border-radius: var(--radius);
+    padding: 1.5rem;
+    max-height: 90vh;
+    overflow-y: auto;
+    box-shadow: 0 20px 60px rgba(0,0,0,.35);
+}
+.loan-actions {
+    display: flex;
+    gap: 0.5rem;
+    margin-top: 0.5rem;
+}
+
+/* ══════════════════════════════════════════════════════════════
+   ADMIN — abas, cabeçalho editável
+   ══════════════════════════════════════════════════════════════ */
+.tab-content { display: none !important; }
+.tab-content.active { display: block !important; }
+.school-header-edit {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    margin-top: 0.5rem;
+}
+.edit-school-btn {
+    background: var(--primary);
+    border: none;
+    color: #fff;
+    padding: 0.3rem 0.6rem;
+    border-radius: 6px;
+    font-size: 0.7rem;
+    cursor: pointer;
+}
+
+/* Relatórios — pré-visualização */
+#previewRelatorio {
+    background: var(--card);
+    padding: 1.5rem;
+    border-radius: 8px;
+    font-family: 'Courier New', monospace;
+    font-size: 0.78rem;
+    white-space: pre-wrap;
+    overflow-x: auto;
+    border: 1px solid var(--border);
+    margin-top: 1rem;
+    color: var(--text);
+    line-height: 1.5;
+}
+
+/* ── Tags de palavras-chave ──────────────────────────────────── */
+.tag-keyword {
+    display: inline;
+    background: none;
+    color: #60a5fa;
+    border-radius: 0;
+    padding: 0;
+    font-size: 0.68rem;
+    font-weight: 700;
+    transition: opacity 0.15s;
+    user-select: none;
+    white-space: nowrap;
+}
+.tag-keyword:hover { opacity: 0.7; transform: none; }
+.tag-keyword.tag-static {
+    cursor: default;
+    pointer-events: none;
+}
+.tag-keyword.tag-static:hover { opacity: 1; }
+
+/* ══════════════════════════════════════════════════════════════
+   ACERVO — cards horizontais em escala ~50%
+   Uma coluna (como sempre), tudo proporcional ao original.
+
+   Original → Escalado
+   Capa:    96×148px → 48×74px
+   Padding: 1.25rem  → 0.6rem
+   Gap:     1rem     → 0.5rem
+   Título:  1.1rem   → 0.62rem
+   Meta:    0.8rem   → 0.6rem
+   Badge:   0.75rem  → 0.58rem
+   ══════════════════════════════════════════════════════════════ */
+
+/* ══════════════════════════════════════════════════════════════
+   ACERVO PÚBLICO (index) — cards com altura fixa = --cover-h
+   ══════════════════════════════════════════════════════════════ */
+
+#listaLivros .book-item {
+    padding: 0;
+    gap: 0;
+    margin-bottom: 0.3rem;
+    overflow: hidden;
+    display: flex;
+    flex-direction: row;
+    align-items: stretch;
+    height: var(--cover-h);
+    max-height: var(--cover-h);
+}
+
+#listaLivros .book-header {
+    flex: 1;
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: stretch !important;
+    padding: 0;
+    gap: 0;
+    overflow: hidden;
+    height: 100%;
+}
+
+#listaLivros .book-cover-wrap {
+    width: calc(var(--cover-h) * 4 / 5) !important;
+    min-width: calc(var(--cover-h) * 4 / 5) !important;
+    max-width: calc(var(--cover-h) * 4 / 5) !important;
+    height: 100% !important;
+    min-height: unset !important;
+    max-height: unset !important;
+    align-self: stretch !important;
+    flex-shrink: 0 !important;
+    flex-grow: 0 !important;
+    position: relative !important;
+    display: block !important;
+    overflow: hidden !important;
+    border-radius: var(--radius) 0 0 var(--radius) !important;
+}
+
+#listaLivros .book-cover-wrap img.cover-img {
+    position: absolute !important;
+    inset: 0 !important;
+    width: 100% !important;
+    height: 100% !important;
+    object-fit: cover !important;
+    display: block !important;
+}
+
+#listaLivros .book-cover-wrap.sem-capa img.cover-img {
+    display: none !important;
+}
+
+#listaLivros .book-cover-wrap .book-cover-label {
+    position: absolute;
+    inset: 0;
+}
+
+#listaLivros .book-header-inner {
+    height: 100%;
+    min-height: unset;
+    gap: 0;
+    justify-content: space-between;
+    padding: 0.5rem 0.75rem;
+    flex: 1 1 0;
+    min-width: 0;
+    overflow: hidden;
+}
+
+#listaLivros .book-status-row {
+    width: 100%;
+    align-self: flex-end;
+    margin-top: auto;
+}
+
+#listaLivros .book-title {
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: var(--primary);
+    line-height: 1.35;
+    word-break: break-word;
+    overflow-wrap: break-word;
+    display: -webkit-box !important;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    padding-right: 0.75rem;
+}
+
+#listaLivros .book-meta-item {
+    font-size: 0.68rem;
+    overflow: hidden;
+    word-break: break-word;
+    overflow-wrap: break-word;
+}
+
+#listaLivros .book-meta-item.meta-autor {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+#listaLivros .book-meta-item.meta-categoria {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+#listaLivros .book-tags-inline {
+    display: -webkit-box;
+    -webkit-line-clamp: 1;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+#listaLivros .badge       { font-size: 0.64rem; padding: 0.1rem 0.3rem; }
+#listaLivros .tag-keyword { font-size: 0.64rem; }
+
+#listaLivros .accordion-indicator {
+    width: 14px; height: 14px; font-size: 0.5rem; top: 0.4rem; right: 0.4rem;
+}
+
+#listaLivros .book-details > * { padding: 0.75rem 0.6rem; }
+
+#listaLivros .book-status-row.stacked {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 0.1rem;
+    margin-top: 0;
+    width: 100%;
+    align-self: stretch;
+}
+
+#listaLivros .book-status-badge-row {
+    display: flex;
+    justify-content: flex-start;
+    width: 100%;
+}
+
+/* ══════════════════════════════════════════════════════════════
+   ADMIN — cards com altura fixa idêntica ao index
+   Header = --cover-h fixo; botões abaixo com separador visual.
+   ══════════════════════════════════════════════════════════════ */
+
+/* Altura dos botões de ação — usada para estabilizar as setas */
+:root { --actions-h: 2.1rem; }
+
+/* book-item: coluna com altura total fixa */
+#tab-registro .book-item,
+#secaoAtrasadosAdmin .book-item {
+    flex-direction: column !important;
+    padding: 0 !important;
+    overflow: hidden !important;
+    align-items: stretch !important;
+    height: calc(var(--cover-h) + var(--actions-h)) !important;
+    max-height: calc(var(--cover-h) + var(--actions-h)) !important;
+}
+
+/* book-header: altura fixa = cover-h, overflow oculto */
+#tab-registro .book-header,
+#secaoAtrasadosAdmin .book-header {
+    width: 100% !important;
+    cursor: default !important;
+    align-items: stretch !important;
+    overflow: hidden !important;
+    padding: 0 !important;
+    gap: 0 !important;
+    height: var(--cover-h) !important;
+    max-height: var(--cover-h) !important;
+    min-height: unset !important;
+    /* Separador visual entre card e botões */
+    border-bottom: 1px solid var(--border) !important;
+}
+
+/* Miniatura: mesmas dimensões do index, canto inferior esquerdo reto */
+#tab-registro .book-cover-wrap,
+#secaoAtrasadosAdmin .book-cover-wrap {
+    width: calc(var(--cover-h) * 4 / 5) !important;
+    min-width: calc(var(--cover-h) * 4 / 5) !important;
+    max-width: calc(var(--cover-h) * 4 / 5) !important;
+    height: 100% !important;
+    min-height: unset !important;
+    max-height: unset !important;
+    align-self: stretch !important;
+    flex-shrink: 0 !important;
+    flex-grow: 0 !important;
+    position: relative !important;
+    display: block !important;
+    overflow: hidden !important;
+    border-radius: var(--radius) 0 0 0 !important;
+}
+
+#tab-registro .book-cover-wrap img.cover-img,
+#secaoAtrasadosAdmin .book-cover-wrap img.cover-img {
+    position: absolute !important;
+    inset: 0 !important;
+    width: 100% !important;
+    height: 100% !important;
+    object-fit: cover !important;
+    display: block !important;
+}
+
+#tab-registro .book-cover-wrap.sem-capa img.cover-img,
+#secaoAtrasadosAdmin .book-cover-wrap.sem-capa img.cover-img {
+    display: none !important;
+}
+
+#tab-registro .book-cover-wrap .book-cover-label,
+#secaoAtrasadosAdmin .book-cover-wrap .book-cover-label {
+    position: absolute;
+    inset: 0;
+}
+
+/* book-header-inner: space-between para empurrar tags/badge pro pé */
+#tab-registro .book-header-inner,
+#secaoAtrasadosAdmin .book-header-inner {
+    height: 100%;
+    min-height: unset;
+    gap: 0.4rem;
+    justify-content: space-between;
+    padding: 0.5rem 0.75rem;
+    flex: 1 1 0;
+    min-width: 0;
+    overflow: hidden;
+}
+
+/* book-status-row: sempre no pé do header-inner */
+#tab-registro .book-status-row,
+#secaoAtrasadosAdmin .book-status-row {
+    width: 100%;
+    align-self: flex-end;
+    margin-top: auto;
+}
+
+#tab-registro .book-title,
+#secaoAtrasadosAdmin .book-title {
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: var(--primary);
+    line-height: 1.35;
+    word-break: break-word;
+    overflow-wrap: break-word;
+    display: -webkit-box !important;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    padding-right: 0;
+}
+
+#tab-registro .book-meta-item,
+#secaoAtrasadosAdmin .book-meta-item {
+    font-size: 0.68rem;
+    overflow: hidden;
+    word-break: break-word;
+    overflow-wrap: break-word;
+}
+
+#tab-registro .book-meta-item.meta-autor,
+#secaoAtrasadosAdmin .book-meta-item.meta-autor {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+#tab-registro .book-meta-item.meta-categoria,
+#secaoAtrasadosAdmin .book-meta-item.meta-categoria {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+#tab-registro .book-tags-inline,
+#secaoAtrasadosAdmin .book-tags-inline {
+    display: -webkit-box;
+    -webkit-line-clamp: 1;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+#tab-registro .badge,
+#secaoAtrasadosAdmin .badge       { font-size: 0.64rem; padding: 0.1rem 0.3rem; }
+#tab-registro .tag-keyword,
+#secaoAtrasadosAdmin .tag-keyword { font-size: 0.64rem; }
+
+#tab-registro .accordion-indicator,
+#secaoAtrasadosAdmin .accordion-indicator {
+    width: 14px; height: 14px; font-size: 0.5rem; top: 0.4rem; right: 0.4rem;
+}
+
+/* Botões de ação: altura fixa = --actions-h, separados do header */
+#tab-registro .book-actions,
+#secaoAtrasadosAdmin .book-actions {
+    height: var(--actions-h);
+    min-height: var(--actions-h);
+    max-height: var(--actions-h);
+    padding: 0.25rem 0.6rem;
+    gap: 0.25rem;
+    border-radius: 0 0 var(--radius) var(--radius);
+    overflow: hidden;
+}
+
+#tab-registro .book-actions .btn-small,
+#secaoAtrasadosAdmin .book-actions .btn-small {
+    font-size: 0.58rem;
+    padding: 0.2rem 0.2rem;
+    height: 100%;
+}
+
+#tab-registro .book-details > *,
+#secaoAtrasadosAdmin .book-details > * { padding: 0.75rem 0.6rem; }
+
+#tab-registro .book-status-row.stacked,
+#secaoAtrasadosAdmin .book-status-row.stacked {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 0.1rem;
+    margin-top: auto;
+    width: 100%;
+    align-self: stretch;
+}
+
+#tab-registro .book-status-badge-row,
+#secaoAtrasadosAdmin .book-status-badge-row {
+    display: flex;
+    justify-content: flex-start;
+    width: 100%;
+}
+
+/* Index: badge à esquerda */
+#listaLivros .book-status-badge-row {
+    justify-content: flex-start;
+}
+
+/* Altura mínima da lista = card maior possível (font 16px: sem botões de ação) */
+#listaLivros {
+    min-height: 192px;
+}
+
+/* Container fixo das setas — separado dos cards */
+#acervo-nav-wrapper {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.5rem 0;
+}
+#acervo-nav-wrapper-admin {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.5rem 0;
+}
+
+/* Garante espaço mínimo para setas não sumirem com poucos cards */
+#listaAdmin {
+    min-height: calc(var(--cover-h) + var(--actions-h));
+}
+
+
+
+
+
+
+
+
+
+
+
+/* ============================================================================
+   BIBMAKER — Estilos específicos da página bibmaker.html
+   ============================================================================ */
+
+/* Barra de acessibilidade verde para o BibMaker */
+body.bibmaker-page .accessibility-bar {
+    background: #166534;
+}
+
+/* Cabeçalho com borda verde */
+body.bibmaker-page header {
+    border-bottom: 3px solid #166534;
+}
+
+body.bibmaker-page header h1 {
+    color: #166534;
+}
+
+/* Abas de navegação do BibMaker */
+.bm-tabs-nav {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+    background: var(--card);
+    border-radius: var(--radius);
+    padding: 0.4rem;
+    box-shadow: var(--shadow);
+    border: 1px solid var(--border);
+}
+
+.bm-tab-btn {
+    flex: 1;
+    padding: 0.7rem 0.5rem;
+    border: none;
+    border-radius: 8px;
+    background: transparent;
+    color: var(--text-light);
+    font-weight: 700;
+    font-size: 0.78rem;
+    cursor: pointer;
+    transition: all 0.15s;
+    text-transform: uppercase;
+    font-family: inherit;
+}
+
+.bm-tab-btn.active {
+    background: #166534;
+    color: #fff;
+}
+
+/* Botão verde BibMaker */
+.btn-bibmaker {
+    background: #166534;
+    color: #fff;
+}
+
+.btn-bibmaker:hover {
+    background: #15803d;
+}
+
+/* Card h2 verde */
+body.bibmaker-page .card h2 {
+    color: #166534;
+}
+
+/* Tipo de biblioteca selecionado */
+.bm-tipo-btn.selected {
+    border-color: #166534;
+    background: #f0fdf4;
+    color: #166534;
+}
+
+[data-theme="dark"] .bm-tipo-btn.selected {
+    background: #052e16;
+}
+
+/* Preview do nome da biblioteca */
+.bm-nome-preview {
+    background: #f0fdf4;
+    border: 1px solid #22c55e;
+    border-radius: 8px;
+    padding: 0.75rem 1rem;
+    font-size: 0.8rem;
+    color: #166534;
+    font-weight: 700;
+    text-align: center;
+}
+
+[data-theme="dark"] .bm-nome-preview {
+    background: #052e16;
+}
+
+/* Upload zone */
+.bm-upload-zone {
+    border: 2px dashed var(--border);
+    border-radius: var(--radius);
+    padding: 2rem 1rem;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.15s;
+    background: var(--bg);
+}
+
+.bm-upload-zone:hover,
+.bm-upload-zone.drag-over {
+    border-color: #22c55e;
+    background: #f0fdf4;
+}
+
+[data-theme="dark"] .bm-upload-zone:hover,
+[data-theme="dark"] .bm-upload-zone.drag-over {
+    background: #052e16;
+}
+
+/* Status de versão OK */
+.bm-diff-ok {
+    background: #f0fdf4;
+    border: 1px solid #22c55e;
+    color: #166534;
+    border-radius: 8px;
+    padding: 0.75rem 1rem;
+    font-size: 0.82rem;
+    font-weight: 700;
+}
+
+[data-theme="dark"] .bm-diff-ok {
+    background: #052e16;
+}
+
+/* Status de versão desatualizada */
+.bm-diff-warn {
+    background: #fffbeb;
+    border: 1px solid #fcd34d;
+    color: #92400e;
+    border-radius: 8px;
+    padding: 0.75rem 1rem;
+    font-size: 0.82rem;
+    font-weight: 700;
+}
+
+[data-theme="dark"] .bm-diff-warn {
+    background: #1c1200;
+    color: #fcd34d;
+}
+
+/* Badge de versão */
+.bm-version-badge {
+    display: inline-block;
+    background: #f0fdf4;
+    color: #166534;
+    border: 1px solid #22c55e;
+    border-radius: 20px;
+    padding: 0.15rem 0.5rem;
+    font-size: 0.62rem;
+    font-weight: 800;
+    margin-left: 0.4rem;
+    vertical-align: middle;
+}
+
+[data-theme="dark"] .bm-version-badge {
+    background: #052e16;
+}
+
+/* Subtítulo do cabeçalho BibMaker */
+.bm-subtitle {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.1rem;
+    text-align: center;
+}
+
+.bm-subtitle span:first-child {
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: var(--text);
+}
+
+.bm-subtitle span:last-child {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--text-light);
+}
+
+.bm-version-info {
+    font-size: 0.65rem;
+    color: var(--text-light);
+    margin-top: 0.15rem;
+    letter-spacing: 0.05em;
+}
+
+/* Foco verde nos inputs do BibMaker */
+body.bibmaker-page input:focus,
+body.bibmaker-page select:focus,
+body.bibmaker-page textarea:focus {
+    border-color: #22c55e;
+    box-shadow: 0 0 0 2px rgba(34, 197, 94, 0.15);
+}
+
+/* Checkbox verde */
+body.bibmaker-page .checkbox-container.checked {
+    border-color: #166534;
+    background: #f0fdf4;
+}
+
+[data-theme="dark"] body.bibmaker-page .checkbox-container.checked {
+    background: #052e16;
+}
