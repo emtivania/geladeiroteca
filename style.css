@@ -471,7 +471,7 @@ input:disabled {
     gap: 0.4rem;
     flex: 1 1 0 !important;
     min-width: 0;
-    min-height: 148px;
+    min-height: 168px;
     overflow: hidden;
 }
 
@@ -522,6 +522,7 @@ input:disabled {
     -webkit-line-clamp: 3;
     -webkit-box-orient: vertical;
     overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .book-meta-box {
@@ -1215,6 +1216,7 @@ input[type="search"] { appearance: none; -webkit-appearance: none; }
     -webkit-line-clamp: 3;
     -webkit-box-orient: vertical;
     overflow: hidden;
+    text-overflow: ellipsis;
     padding-right: 0.75rem;
 }
 

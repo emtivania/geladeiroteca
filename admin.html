@@ -266,7 +266,18 @@
                 if (!btn) return;
                 const local = (versaoLocal || '?').trim();
                 const base  = (versaoBase  || '?').trim();
-                if (local !== '?' && base !== '?' && local === base) {
+                function parseSemver(v) { return v.split('.').map(n => parseInt(n)||0); }
+                function localGeBase(l, b) {
+                    if (l === '?' || b === '?') return false;
+                    var lp = parseSemver(l), bp = parseSemver(b);
+                    for (var i = 0; i < Math.max(lp.length, bp.length); i++) {
+                        var lv = lp[i]||0, bv = bp[i]||0;
+                        if (lv > bv) return true;
+                        if (lv < bv) return false;
+                    }
+                    return true; // igual
+                }
+                if (local !== '?' && base !== '?' && localGeBase(local, base)) {
                     btn.textContent = '✅ Atualizada';
                     btn.title = `Sua biblioteca está na versão mais recente (v${local})`;
                     btn.onclick = null;
@@ -404,11 +415,12 @@
                     <div class="form-group"><label>ISBN (OPCIONAL)</label><input type="text" id="isbn"></div>
                     <div class="form-group"><label>AUTOR *</label><input type="text" id="autor" required></div>
 
-                    <div class="form-group full-width"><label>CATEGORIA *</label><select id="categoria" required></select></div>
+                    <div class="form-group full-width"><label>CATEGORIA <span style="color:var(--text-light);font-size:0.75rem;">(opcional)</span></label><select id="categoria"></select></div>
+                    <div class="form-group"><label>PRATELEIRA <span style="color:var(--text-light);font-size:0.75rem;">(opcional)</span></label><input type="text" id="prateleira" placeholder="Ex: 3 ou 3/8" oninput="this.value=this.value.replace(/[^0-9\/]/g,'')"><small style="color:var(--text-light);font-size:0.68rem;">Número da prateleira. Para múltiplas, use barra: 3/8</small></div>
                     <div class="form-group"><label>QUANTIDADE TOTAL *</label><input type="number" id="quantidade" min="1" required></div>
                     <div class="form-group full-width">
-                        <label for="palavrasChave">PALAVRA-CHAVE *</label>
-                        <input type="text" id="palavrasChave" placeholder="Ex: aventura" autocomplete="off" required onkeydown="if(event.key===',')event.preventDefault();">
+                        <label for="palavrasChave">PALAVRA-CHAVE <span style="color:var(--text-light);font-size:0.75rem;">(opcional)</span></label>
+                        <input type="text" id="palavrasChave" placeholder="Ex: aventura" autocomplete="off" onkeydown="if(event.key===',')event.preventDefault();">
                         <small style="color:var(--text-light);font-size:0.7rem;">Uma só palavra-chave (pode ser composta). Use #palavra-chave na busca.</small>
                     </div>
 
@@ -479,7 +491,7 @@
                             <div class="hist-titulo" id="iaTituloEncontrado">—</div>
                             <div class="hist-meta" id="iaAutorEncontrado">—</div>
                             <div class="hist-meta" id="iaIsbnEncontrado"><strong>ISBN:</strong> <span id="iaIsbnEncontradoVal">—</span></div>
-                            <div class="hist-meta" id="iaCategoriaEncontrada"><strong>CAT.:</strong> <span id="iaCategoriaEncontradaVal">—</span></div>
+                            <div class="hist-meta" id="iaCategoriaEncontrada"><strong>CAT.:</strong> <span id="iaCategoriaEncontradaVal">—</span><span id="iaPrateleiraEncontradaVal" style="display:none;font-weight:700;"></span></div>
                             <div class="hist-tags" id="iaTagEncontrada"></div>
                             <span class="badge-qtd" id="iaQtdEncontrada">—</span>
                         </div>
@@ -513,8 +525,9 @@
                     <div class="form-group"><label>TÍTULO *</label><input type="text" id="iaEditTitulo"></div>
                     <div class="form-group"><label>AUTOR *</label><input type="text" id="iaEditAutor"></div>
                     <div class="form-group"><label>ISBN (OPCIONAL)</label><input type="text" id="iaEditIsbn"></div>
-                    <div class="form-group"><label>CATEGORIA *</label><select id="iaEditCategoria"></select></div>
-                    <div class="form-group"><label>PALAVRA-CHAVE *</label><input type="text" id="iaEditPalavras" placeholder="Ex: aventura" maxlength="25"><small style="color:var(--text-light);font-size:0.68rem;">Uma palavra-chave</small></div>
+                    <div class="form-group"><label>CATEGORIA <span style="color:var(--text-light);font-size:0.75rem;">(preenchida pela IA)</span></label><select id="iaEditCategoria"></select></div>
+                    <div class="form-group"><label>PRATELEIRA <span style="color:var(--text-light);font-size:0.75rem;">(opcional)</span></label><input type="text" id="iaEditPrateleira" placeholder="Ex: 3 ou 3/8" oninput="this.value=this.value.replace(/[^0-9\/]/g,'')"><small style="color:var(--text-light);font-size:0.68rem;">Número da prateleira. Para múltiplas, use barra: 3/8</small></div>
+                    <div class="form-group"><label>PALAVRA-CHAVE <span style="color:var(--text-light);font-size:0.75rem;">(opcional)</span></label><input type="text" id="iaEditPalavras" placeholder="Ex: aventura" maxlength="25"><small style="color:var(--text-light);font-size:0.68rem;">Uma palavra-chave</small></div>
                     <div class="form-group"><label>DESCRIÇÃO DA CAPA (ACESSIBILIDADE)</label><input type="text" id="iaEditAltText" maxlength="150"></div>
                     <div class="form-group"><label>QUANTIDADE TOTAL</label><input type="number" id="iaEditQtd" min="1"></div>
                     <div class="form-group">
@@ -540,12 +553,24 @@
                             <div class="meta" id="iaInfoIsbn"></div>
                         </div>
                     </div>
-                    <div style="margin-top:1rem;">
+                    <!-- Seletor de capa para cadastro novo -->
+                    <div style="display:flex;flex-direction:column;align-items:center;gap:0.5rem;margin:0.75rem 0 0.25rem;width:100%;">
+                        <div id="iaCadastroCapa" class="book-cover-wrap sem-capa" aria-label="Capa do livro" style="margin:0 auto;">
+                            <img id="iaCadastroCapaPreview" src="" alt="Capa" class="cover-img" style="display:none;">
+                            <span class="book-cover-label" id="iaCadastroCapaLabel">SEM<br>CAPA</span>
+                        </div>
+                        <div style="display:flex;gap:0.5rem;flex-wrap:wrap;justify-content:center;">
+                            <button type="button" id="iaCadastroCapaBtnEscolher" class="btn btn-outline" onclick="iaAbrirSeletorFoto('novo')" style="padding:0.6rem;font-size:0.8rem;width:auto;min-width:140px;">📷 ESCOLHER CAPA</button>
+                            <button type="button" id="iaCadastroCapaBtnRemover" class="btn btn-outline" onclick="iaRemoverCapaNovo()" style="padding:0.6rem;font-size:0.8rem;width:auto;min-width:100px;display:none;">🗑️ REMOVER</button>
+                        </div>
+                    </div>
+                    <div style="margin-top:0.5rem;">
                         <div class="form-group"><label>TÍTULO *</label><input type="text" id="iaCampoTitulo"></div>
                         <div class="form-group"><label>AUTOR *</label><input type="text" id="iaCampoAutor"></div>
                         <div class="form-group"><label>ISBN (OPCIONAL)</label><input type="text" id="iaCampoIsbn"></div>
-                        <div class="form-group"><label>CATEGORIA *</label><select id="iaCampoCategoria"></select></div>
-                        <div class="form-group"><label>PALAVRA-CHAVE *</label><input type="text" id="iaCampoPalavrasChave" placeholder="Ex: aventura" maxlength="25"><small style="color:var(--text-light);font-size:0.68rem;">Uma palavra-chave</small></div>
+                        <div class="form-group"><label>CATEGORIA <span style="color:var(--text-light);font-size:0.75rem;">(preenchida pela IA)</span></label><select id="iaCampoCategoria"></select></div>
+                        <div class="form-group"><label>PRATELEIRA <span style="color:var(--text-light);font-size:0.75rem;">(opcional)</span></label><input type="text" id="iaCampoPrateleira" placeholder="Ex: 3 ou 3/8" oninput="this.value=this.value.replace(/[^0-9\/]/g,'')"><small style="color:var(--text-light);font-size:0.68rem;">Número da prateleira. Para múltiplas, use barra: 3/8</small></div>
+                        <div class="form-group"><label>PALAVRA-CHAVE <span style="color:var(--text-light);font-size:0.75rem;">(opcional)</span></label><input type="text" id="iaCampoPalavrasChave" placeholder="Ex: aventura" maxlength="25"><small style="color:var(--text-light);font-size:0.68rem;">Uma palavra-chave</small></div>
                         <div class="form-group"><label>DESCRIÇÃO DA CAPA (ACESSIBILIDADE)</label><input type="text" id="iaCampoAltText" maxlength="150"></div>
                         <div class="form-group"><label>QUANTIDADE</label><input type="number" id="iaCampoQtd" value="1" min="1"></div>
                         <div class="form-group">
@@ -569,7 +594,7 @@
                         <div class="info-resultado">
                             <div class="titulo-livro" id="iaResultadoNome">—</div>
                             <div class="meta" id="iaResultadoAutorFinal">—</div>
-                            <div class="meta" id="iaResultadoCategoria" style="display:none;"><strong>CAT.:</strong> <span id="iaResultadoCategoriaVal">—</span></div>
+                            <div class="meta" id="iaResultadoCategoria" style="display:none;"><strong>CAT.:</strong> <span id="iaResultadoCategoriaVal">—</span><span id="iaResultadoPrateleiraVal" style="display:none;font-weight:700;"></span></div>
                             <div class="meta" id="iaResultadoIsbn" style="display:none;"><strong>ISBN:</strong> <span id="iaResultadoIsbnVal">—</span></div>
                             <div class="meta" id="iaResultadoTags"></div>
                             <span class="badge-qtd" id="iaResultadoQtd">1 EXEMPLAR</span>
@@ -689,11 +714,12 @@
                 <div class="form-group"><label>ISBN (OPCIONAL)</label><input type="text" id="editIsbn"></div>
                 <div class="form-group"><label>AUTOR *</label><input type="text" id="editAutor" required></div>
 
-                <div class="form-group full-width"><label>CATEGORIA *</label><select id="editCategoria" required></select></div>
+                <div class="form-group full-width"><label>CATEGORIA</label><select id="editCategoria"></select></div>
+                <div class="form-group"><label>PRATELEIRA <span style="color:var(--text-light);font-size:0.75rem;">(opcional)</span></label><input type="text" id="editPrateleira" placeholder="Ex: 3 ou 3/8" oninput="this.value=this.value.replace(/[^0-9\/]/g,'')"><small style="color:var(--text-light);font-size:0.68rem;">Número da prateleira. Para múltiplas, use barra: 3/8</small></div>
                 <div class="form-group"><label>QUANTIDADE TOTAL *</label><input type="number" id="editQtd" required></div>
                 <div class="form-group full-width">
-                    <label for="editPalavrasChave">PALAVRA-CHAVE *</label>
-                    <input type="text" id="editPalavrasChave" maxlength="25" placeholder="Ex: aventura" autocomplete="off" required onkeydown="if(event.key===',')event.preventDefault();">
+                    <label for="editPalavrasChave">PALAVRA-CHAVE <span style="color:var(--text-light);font-size:0.75rem;">(opcional)</span></label>
+                    <input type="text" id="editPalavrasChave" maxlength="25" placeholder="Ex: aventura" autocomplete="off" onkeydown="if(event.key===',')event.preventDefault();">
                     <small style="color:var(--text-light);font-size:0.7rem;">Uma só palavra-chave (pode ser composta). Use #palavra-chave na busca.</small>
                 </div>
 
@@ -1244,7 +1270,7 @@
         const _catsList = (window.DB?.CATEGORIAS?.length ? window.DB.CATEGORIAS : null) || (window.BIBVANIA_CATS?.length ? window.BIBVANIA_CATS : null) || _CATS_FIXAS;
         // Preenche todos os <select> de categoria com as categorias fixas do sistema.
         function _popularCatSelects() {
-            ['categoria','editCategoria'].forEach(id => {
+            ['categoria','editCategoria','iaCampoCategoria','iaEditCategoria'].forEach(id => {
                 const sel = document.getElementById(id);
                 if (!sel) return;
                 sel.innerHTML = '<option value="">SELECIONE</option>' + _catsList.map(c => `<option value="${c}">${c}</option>`).join('');
@@ -1586,6 +1612,7 @@
             if (tabSalva === 'tab-devolucoes')   window._tabPendente = 'tab-devolucoes';
             if (tabSalva === 'tab-listapessoas') window._tabPendente = 'tab-listapessoas';
             if (tabSalva === 'tab-registro')     window._tabPendente = 'tab-registro';
+            if (tabSalva === 'tab-cadastro-ia')  window._tabPendente = 'tab-cadastro-ia';
 
             // Carregar livros e pessoas em paralelo
             Promise.all([
@@ -1790,6 +1817,19 @@
             } else if (abaAtiva && _scrollProtegido !== null) {
                 requestAnimationFrame(() => window.scrollTo({ top: _scrollProtegido, behavior: 'instant' }));
             }
+
+            // Bug 5: Pré-carregar capas no cache do browser em segundo plano
+            // Isso garante que ao navegar entre livros a capa já esteja em memória (sem loading)
+            (function _preCarregarCapas() {
+                const urls = todosLivros.filter(l => l.imagem_url).map(l => l.imagem_url);
+                urls.forEach(function(url) {
+                    if (!_preCarregarCapas._cache) _preCarregarCapas._cache = new Set();
+                    if (_preCarregarCapas._cache.has(url)) return;
+                    _preCarregarCapas._cache.add(url);
+                    const img = new Image();
+                    img.src = url;
+                });
+            })();
 
             // Se a aba de devoluções estiver visível, recarregar com join
             if (document.getElementById('tab-devolucoes').classList.contains('active')) {
@@ -2084,7 +2124,7 @@
                             <div class="book-meta-box">
                                 <div class="book-meta-item book-meta-single meta-autor"><strong>AUTOR:</strong> ${l.autor || 'NÃO INFORMADO'}</div>
                                 <div class="book-meta-item book-meta-single"><strong>ISBN:</strong> ${l.isbn || 'N/A'}</div>
-                                <div class="book-meta-item book-meta-single meta-categoria"><strong>CAT.:</strong> ${spanCategoria(l.categoria)}</div>
+                                <div class="book-meta-item book-meta-single meta-categoria"><strong>CAT.:</strong> ${spanCategoria(l.categoria)}${l.prateleira ? ` <span style="color:var(--text-light);font-weight:700;">(P${l.prateleira.split('/').map(p=>p.trim()).join('/P')})</span>` : ''}</div>
                                 <div class="book-meta-item book-meta-single"><strong>DOWNLOAD:</strong> ${l.pdf_url ? `<a href="${l.pdf_url}" target="_blank" rel="noopener" onclick="event.stopPropagation()" style="color:var(--primary);font-weight:700;text-decoration:none;">BAIXAR PDF</a>` : ''}</div>
                             </div>
                             <div class="book-status-row stacked">
@@ -2221,6 +2261,7 @@
             document.getElementById('editAutor').value = l.autor || '';
 
             if (document.getElementById('editCategoria')) document.getElementById('editCategoria').value = l.categoria || '';
+            if (document.getElementById('editPrateleira')) document.getElementById('editPrateleira').value = l.prateleira || '';
             document.getElementById('editQtd').value = l.quantidade_total;
             document.getElementById('editPalavrasChave').value = (l.palavras_chave || []).join(', ');
             const _editLista = document.getElementById('editListaColaboradores');
@@ -2297,6 +2338,7 @@
                     titulo:          document.getElementById('editTitulo').value.trim(),
                     autor:           document.getElementById('editAutor').value.trim(),
                     categoria:       document.getElementById('editCategoria')?.value || '',
+                    prateleira:      document.getElementById('editPrateleira')?.value.trim() || null,
                     palavras_chave:  [document.getElementById('editPalavrasChave').value.split(',')[0].trim().toLowerCase()].filter(Boolean),
                     quantidade_total: parseInt(document.getElementById('editQtd').value),
                     alt_text:        document.getElementById('editCapaAltText')?.value?.trim() || null
@@ -2345,6 +2387,7 @@
                     if (payload.titulo          !== undefined) _livroEditado.titulo          = payload.titulo;
                     if (payload.autor           !== undefined) _livroEditado.autor           = payload.autor;
                     if (payload.categoria       !== undefined) _livroEditado.categoria       = payload.categoria;
+                    if (payload.prateleira      !== undefined) _livroEditado.prateleira      = payload.prateleira;
                     if (payload.palavras_chave  !== undefined) _livroEditado.palavras_chave  = payload.palavras_chave;
                     if (payload.alt_text        !== undefined) _livroEditado.alt_text        = payload.alt_text;
                     if (payload.pdf_url         !== undefined) _livroEditado.pdf_url         = payload.pdf_url;
@@ -2881,6 +2924,7 @@
                     titulo:         document.getElementById('titulo').value.trim(),
                     autor:          document.getElementById('autor').value.trim(),
                     categoria:      document.getElementById('categoria').value,
+                    prateleira:     document.getElementById('prateleira').value.trim() || null,
                     quantidade_total: parseInt(document.getElementById('quantidade').value) || 1,
                     palavras_chave: [document.getElementById('palavrasChave').value.split(',')[0].trim().toLowerCase()].filter(Boolean),
                     alt_text:       document.getElementById('capaAltText')?.value?.trim() || ''
@@ -3910,7 +3954,7 @@
 
     // Popular selects de categoria (usa global precoce — disponível antes do módulo ES)
     const _cats = (window.DB?.CATEGORIAS?.length ? window.DB.CATEGORIAS : null) || (window.BIBVANIA_CATS?.length ? window.BIBVANIA_CATS : null) || ['INFANTIL (1º AO 4º)','INFANTOJUVENIL (5º E 6º)','JUVENIL (7º AO 9º)','JOVEM ADULTO (ENSINO MÉDIO)','EJA (FUNDAMENTAL)','EJA (MÉDIO)','DIDÁTICO (EF 1º)','DIDÁTICO (EF 2º)','DIDÁTICO (EF 3º)','DIDÁTICO (EF 4º)','DIDÁTICO (EF 5º)','DIDÁTICO (EF 6º)','DIDÁTICO (EF 7º)','DIDÁTICO (EF 8º)','DIDÁTICO (EF 9º)','DIDÁTICO (EM 1º)','DIDÁTICO (EM 2º)','DIDÁTICO (EM 3º)','DIDÁTICO (EJAF)','DIDÁTICO (EJAM)','DE REFERÊNCIA','CLÁSSICOS', 'REGIONAIS','POESIA'];
-    ['categoria','editCategoria'].forEach(id => {
+    ['categoria','editCategoria','iaCampoCategoria','iaEditCategoria'].forEach(id => {
         const sel = document.getElementById(id);
         if (!sel) return;
         sel.innerHTML = '<option value="">SELECIONE</option>' + _cats.map(c => `<option value="${c}">${c}</option>`).join('');
@@ -4148,7 +4192,8 @@
         }, true); // true = captura, antes do toggleAccordion
     </script>
     <footer style="text-align:center;padding:1.5rem 1rem;font-size:0.7rem;color:var(--text-light);border-top:1px solid var(--border);margin-top:2rem;" aria-label="Rodapé">
-        <p>GELADEIROTECA ONLINE v1.3 &copy; 2026 <a href="https://github.com/emtivania" rel="author noopener" style="color:inherit;">EMTI MARIA VANIA</a> &mdash; <a href="https://creativecommons.org/licenses/by/4.0/deed.pt-br" rel="license noopener" style="color:inherit;">CC-BY 4.0</a> &mdash; <a href="https://github.com/emtivania/geladeiroteca" rel="noopener" style="color:inherit;">GitHub</a> &nbsp;|&nbsp; criado com <a href="bibmaker.html" target="_blank" rel="noopener" style="color:inherit;">BibMaker v1.3</a> &mdash; Construtor de Biblioteca Online da BibVania &nbsp;|&nbsp; BibVania v1.6 &copy; 2026 <a href="https://github.com/ruanolima" rel="author noopener" style="color:inherit;">Ruan Oliveira Lima</a> &mdash; <a href="https://creativecommons.org/licenses/by/4.0/" rel="license noopener" style="color:inherit;">CC-BY-4.0</a> &mdash; <a href="https://github.com/emtivania/bibvania" rel="noopener" style="color:inherit;">GitHub</a></p>
+        <p>BibVania v<span id="footerVersion">1.6</span> &copy; 2026 <a href="https://github.com/ruanolima" rel="author noopener" style="color:inherit;">Ruan Oliveira Lima</a> &mdash; <a href="https://creativecommons.org/licenses/by/4.0/" rel="license noopener" style="color:inherit;">CC-BY-4.0</a> &mdash; <a href="https://github.com/emtivania/bibvania" rel="noopener" style="color:inherit;">GitHub</a></p>
+        <script>(function(){var v=document.querySelector('meta[name="version"]')?.getAttribute('content');var el=document.getElementById('footerVersion');if(v&&el)el.textContent=v;})();</script>
     </footer>
 <!-- Supabase UMD para o módulo CADASTRO IA -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
@@ -4176,9 +4221,26 @@ var _iaFotoBase64 = null;   // foto atual carregada (para análise)
 var _iaFotoMime   = 'image/jpeg';
 var _iaCapaEditBase64 = null; // capa escolhida durante edição (pode ser diferente da foto de análise)
 var _iaCapaEditMime   = 'image/jpeg';
+var _iaCapaNovoBase64 = null; // capa escolhida durante cadastro novo
+var _iaCapaNovoMime   = 'image/jpeg';
+
+window.iaRemoverCapaNovo = function() {
+    _iaCapaNovoBase64 = null; _iaCapaNovoMime = 'image/jpeg';
+    var np = document.getElementById('iaCadastroCapaPreview');
+    var nw = document.getElementById('iaCadastroCapa');
+    var nl = document.getElementById('iaCadastroCapaLabel');
+    var nr = document.getElementById('iaCadastroCapaBtnRemover');
+    var nb = document.getElementById('iaCadastroCapaBtnEscolher');
+    if (np) { np.src = ''; np.style.display = 'none'; }
+    if (nw) { nw.classList.remove('capa-carregada','has-image'); nw.classList.add('sem-capa'); }
+    if (nl) nl.style.display = '';
+    if (nr) nr.style.display = 'none';
+    if (nb) nb.innerHTML = '📷 ESCOLHER CAPA';
+};
 var _iaLivroEncontrado = null;
 window._iaLivroEncontrado = null;
 var _iaModoAtivo = null;   // 'cadastro' | 'edicao' | null
+var _iaForcarNovoLivro = false; // Bug 2 fix: forçar novo ID quando vem de "Cadastrar como novo"
 var _iaIniciado  = false;
 
 // ── Init (lazy — chamado ao abrir a aba) ──────────────────────
@@ -4272,7 +4334,7 @@ function iaProcessarFoto(file, soPareEdicao) {
         var mime = p[0].split(':')[1].split(';')[0];
         var b64  = p[1];
 
-        if (soPareEdicao) {
+        if (soPareEdicao === true) {
             // Só atualiza a capa do formulário de edição — não dispara análise
             _iaCapaEditBase64 = b64;
             _iaCapaEditMime   = mime;
@@ -4282,6 +4344,23 @@ function iaProcessarFoto(file, soPareEdicao) {
             if (ep) { ep.src = d; ep.style.display = 'block'; ep.className = 'cover-img'; }
             if (ewrap) { ewrap.classList.remove('sem-capa'); ewrap.classList.add('capa-carregada','has-image'); }
             if (elbl) elbl.style.display = 'none';
+            return;
+        }
+
+        if (soPareEdicao === 'novo') {
+            // Atualiza a capa do formulário de cadastro novo
+            _iaCapaNovoBase64 = b64;
+            _iaCapaNovoMime   = mime;
+            var np  = document.getElementById('iaCadastroCapaPreview');
+            var nw  = document.getElementById('iaCadastroCapa');
+            var nl  = document.getElementById('iaCadastroCapaLabel');
+            var nr  = document.getElementById('iaCadastroCapaBtnRemover');
+            var nb  = document.getElementById('iaCadastroCapaBtnEscolher');
+            if (np) { np.src = d; np.style.display = 'block'; }
+            if (nw) { nw.classList.remove('sem-capa'); nw.classList.add('capa-carregada','has-image'); }
+            if (nl) nl.style.display = 'none';
+            if (nr) nr.style.display = '';
+            if (nb) nb.innerHTML = '📷 TROCAR CAPA';
             return;
         }
 
@@ -4695,6 +4774,8 @@ window.iaAnalisarComIA = async function() {
             document.getElementById('iaAutorEncontrado').textContent    = existente.autor||'—';
             document.getElementById('iaIsbnEncontradoVal').textContent = existente.isbn||'—';
             document.getElementById('iaCategoriaEncontradaVal').textContent = existente.categoria||'—';
+            var _pratVal1 = document.getElementById('iaPrateleiraEncontradaVal');
+            if(_pratVal1){ if(existente.prateleira){ _pratVal1.textContent=' (P'+existente.prateleira.split('/').map(function(p){return p.trim();}).join('/P')+')'; _pratVal1.style.display=''; }else{ _pratVal1.style.display='none'; } }
             var _tagsEl = document.getElementById('iaTagEncontrada');
             if (_tagsEl) {
                 var _tags = existente.palavras_chave||[];
@@ -4708,6 +4789,8 @@ window.iaAnalisarComIA = async function() {
         } else {
             _iaModoAtivo = 'cadastro';
             document.getElementById('iaCardDados').style.display = 'block';
+            var _dadosElIA = document.getElementById('iaCardDados');
+            if (_dadosElIA) requestAnimationFrame(function(){ window.scrollTo({ top: _dadosElIA.getBoundingClientRect().top + window.scrollY - 12, behavior: 'smooth' }); });
             iaMostrarStatus('✅ LIVRO IDENTIFICADO! CONFIRME OS DADOS ABAIXO.', 'ok');
         }
     } catch(e) {
@@ -4789,6 +4872,8 @@ window.iaEditarComIAById = async function(id) {
     document.getElementById('iaAutorEncontrado').textContent    = livro.autor||'—';
     document.getElementById('iaIsbnEncontradoVal').textContent  = livro.isbn||'—';
     document.getElementById('iaCategoriaEncontradaVal').textContent = livro.categoria||'—';
+    var _pratVal2 = document.getElementById('iaPrateleiraEncontradaVal');
+    if(_pratVal2){ if(livro.prateleira){ _pratVal2.textContent=' (P'+livro.prateleira.split('/').map(function(p){return p.trim();}).join('/P')+')'; _pratVal2.style.display=''; }else{ _pratVal2.style.display='none'; } }
     var q = livro.quantidade_total;
     document.getElementById('iaQtdEncontrada').textContent = q+(q===1?' EXEMPLAR':' EXEMPLARES');
     var _tagsEl2 = document.getElementById('iaTagEncontrada');
@@ -4818,6 +4903,7 @@ function _iaPreencherFormEdicao(d) {
         ec.value = d.categoria||livro.categoria||'';
         if (!ec.value) ec.selectedIndex = 1;
     }
+    _iaS('iaEditPrateleira', livro.prateleira||'');
     // Capa de edição: foto carregada > foto de análise > URL do livro
     _iaCapaEditBase64 = null;
     var capaUrl = (_iaFotoBase64?('data:'+_iaFotoMime+';base64,'+_iaFotoBase64):null) || livro.imagem_url || null;
@@ -4837,8 +4923,9 @@ function _iaPreencherFormEdicao(d) {
     }
     document.getElementById('iaCardEncontrado').style.display = 'none';
     document.getElementById('iaCardEditForm').style.display   = 'block';
+    var _editFormEl = document.getElementById('iaCardEditForm');
+    if (_editFormEl) requestAnimationFrame(function(){ window.scrollTo({ top: _editFormEl.getBoundingClientRect().top + window.scrollY - 12, behavior: 'smooth' }); });
 }
-window._iaPreencherFormEdicao = _iaPreencherFormEdicao;
 
 // Wrapper chamado pelo botão EDITAR do iaCardEncontrado
 window.iaEditarManual = function() {
@@ -4856,7 +4943,29 @@ window.iaCadastrarComoNovoComIA = async function() {
 
     document.getElementById('iaCardEncontrado').style.display = 'none';
     _iaModoAtivo = 'cadastro';
+    _iaForcarNovoLivro = true; // Bug 2 fix: garantir novo ID, sem mesclar por título
 
+    _iaCapaNovoBase64 = null; _iaCapaNovoMime = 'image/jpeg';
+    // Pré-popular capa do livro original se disponível
+    var _np = document.getElementById('iaCadastroCapaPreview');
+    var _nw = document.getElementById('iaCadastroCapa');
+    var _nl = document.getElementById('iaCadastroCapaLabel');
+    var _nr = document.getElementById('iaCadastroCapaBtnRemover');
+    if (livro.imagem_url && _np) {
+        _np.src = livro.imagem_url; _np.style.display = 'block';
+        if (_nw) { _nw.classList.remove('sem-capa'); _nw.classList.add('capa-carregada','has-image'); }
+        if (_nl) _nl.style.display = 'none';
+        if (_nr) _nr.style.display = '';
+        var _nb = document.getElementById('iaCadastroCapaBtnEscolher');
+        if (_nb) _nb.innerHTML = '📷 TROCAR CAPA';
+    } else if (_np) {
+        _np.src = ''; _np.style.display = 'none';
+        if (_nw) { _nw.classList.remove('capa-carregada','has-image'); _nw.classList.add('sem-capa'); }
+        if (_nl) _nl.style.display = '';
+        if (_nr) _nr.style.display = 'none';
+        var _nb = document.getElementById('iaCadastroCapaBtnEscolher');
+        if (_nb) _nb.innerHTML = '📷 ESCOLHER CAPA';
+    }
     _iaS('iaCampoTitulo',       livro.titulo  || '');
     _iaS('iaCampoAutor',        livro.autor   || '');
     _iaS('iaCampoIsbn',         '');
@@ -4864,6 +4973,7 @@ window.iaCadastrarComoNovoComIA = async function() {
     _iaS('iaCampoAltText',      livro.alt_text || '');
     _iaS('iaCampoPdfUrl',       livro.pdf_url  || '');
     _iaS('iaCampoQtd',          '1');
+    _iaS('iaCampoPrateleira',   livro.prateleira || '');
     var catSel = document.getElementById('iaCampoCategoria');
     if (catSel) catSel.value = livro.categoria || '';
 
@@ -4892,7 +5002,8 @@ window.iaCadastrarComoNovoComIA = async function() {
     }
 
     document.getElementById('iaCardDados').style.display = 'block';
-    window.scrollTo({top: document.getElementById('iaCardDados').offsetTop - 20, behavior: 'smooth'});
+    var _dadosEl = document.getElementById('iaCardDados');
+    if (_dadosEl) requestAnimationFrame(function(){ window.scrollTo({ top: _dadosEl.getBoundingClientRect().top + window.scrollY - 12, behavior: 'smooth' }); });
 };
 
 // ── Salvar edição ─────────────────────────────────────────────
@@ -4915,6 +5026,7 @@ window.iaSalvarEdicao = async function() {
             autor:            autor,
             isbn:             document.getElementById('iaEditIsbn').value.trim()||'',
             categoria:        document.getElementById('iaEditCategoria').value||'',
+            prateleira:       document.getElementById('iaEditPrateleira').value.trim()||null,
             palavras_chave:   pcs,
             alt_text:         document.getElementById('iaEditAltText').value.trim()||'',
             quantidade_total: qtd,
@@ -4943,12 +5055,15 @@ window.iaSalvarEdicao = async function() {
         document.getElementById('iaResultadoAutorFinal').textContent = autor;
         document.getElementById('iaResultadoQtd').textContent    = qtd+(qtd===1?' EXEMPLAR':' EXEMPLARES');
         var _catValE = document.getElementById('iaEditCategoria')?.value || livro.categoria || '';
+        var _pratValE = document.getElementById('iaEditPrateleira')?.value.trim() || livro.prateleira || '';
         var _isbnValE = livro.isbn || '';
         var _tagsValE = (livro.palavras_chave||[]);
         var _catElE = document.getElementById('iaResultadoCategoria'); var _catVE = document.getElementById('iaResultadoCategoriaVal');
+        var _pratVE = document.getElementById('iaResultadoPrateleiraVal');
         var _isbnElE = document.getElementById('iaResultadoIsbn'); var _isbnVE = document.getElementById('iaResultadoIsbnVal');
         var _tagsElE = document.getElementById('iaResultadoTags');
         if(_catElE&&_catVE){ if(_catValE){_catVE.textContent=_catValE;_catElE.style.display='block';}else{_catElE.style.display='none';} }
+        if(_pratVE){ if(_pratValE){ _pratVE.textContent=' (P'+_pratValE.split('/').map(function(p){return p.trim();}).join('/P')+')'; _pratVE.style.display=''; }else{ _pratVE.style.display='none'; } }
         if(_isbnElE&&_isbnVE){ if(_isbnValE){_isbnVE.textContent=_isbnValE;_isbnElE.style.display='block';}else{_isbnElE.style.display='none';} }
         if(_tagsElE){ _tagsElE.innerHTML=_tagsValE.length?_tagsValE.map(function(p){return '<span class="tag-keyword tag-static">#'+p+'</span>';}).join(' '):''; }
         var capEl2=document.getElementById('iaResultadoCapa');
@@ -4969,6 +5084,7 @@ window.iaCadastrarLivro = async function() {
     var pcs    = [document.getElementById('iaCampoPalavrasChave').value.split(',')[0].trim().toLowerCase()].filter(Boolean);
     var pdfUrl = document.getElementById('iaCampoPdfUrl').value.trim()||'';
     var categoria = document.getElementById('iaCampoCategoria').value.trim()||'';
+    var prateleira = document.getElementById('iaCampoPrateleira').value.trim()||'';
     if (!titulo) { iaMostrarStatus('⚠️ INFORME O TÍTULO','erro'); return; }
     if (!autor)  { iaMostrarStatus('⚠️ INFORME O AUTOR','erro'); return; }
     // BUG FIX #7: Validar categoria obrigatória
@@ -4982,6 +5098,7 @@ window.iaCadastrarLivro = async function() {
             autor:            autor,
             isbn:             document.getElementById('iaCampoIsbn').value.trim()||'',
             categoria:        document.getElementById('iaCampoCategoria').value||'',
+            prateleira:       prateleira||null,
             palavras_chave:   pcs,
             alt_text:         document.getElementById('iaCampoAltText').value.trim()||'',
             quantidade_total: qtd,
@@ -4989,13 +5106,20 @@ window.iaCadastrarLivro = async function() {
         if (pdfUrl) payload.pdf_url = pdfUrl;
 
         // Comprime e faz upload da capa para imgbb antes de salvar
-        var capaSrc = _iaFotoBase64 ? ('data:'+_iaFotoMime+';base64,'+_iaFotoBase64) : null;
+        // Prioridade: capa escolhida no seletor > foto tirada para análise > URL original do livro
+        var _capaSrcB64  = _iaCapaNovoBase64 || _iaFotoBase64;
+        var _capaSrcMime = _iaCapaNovoBase64 ? _iaCapaNovoMime : _iaFotoMime;
+        var capaSrc = _capaSrcB64 ? ('data:'+_capaSrcMime+';base64,'+_capaSrcB64) : null;
         var urlCapa = null;
         if (capaSrc) {
             iaMostrarStatus('🖼️ ENVIANDO CAPA...','info');
             var comprimida = await iaComprimirImagem(capaSrc);
             urlCapa = await _iaUploadImgbb(comprimida);
             payload.imagem_url = urlCapa;
+        } else if (_iaLivroEncontrado && _iaLivroEncontrado.imagem_url) {
+            // Sem nova foto: reutiliza a URL da capa do livro original
+            payload.imagem_url = _iaLivroEncontrado.imagem_url;
+            urlCapa = _iaLivroEncontrado.imagem_url;
         }
 
         iaMostrarStatus('💾 SALVANDO...','info');
@@ -5003,6 +5127,7 @@ window.iaCadastrarLivro = async function() {
         var livroId   = resultado && resultado.data && resultado.data.id;
 
         _iaModoAtivo = null;
+        _iaForcarNovoLivro = false; // Bug 2 fix: resetar após salvar
         var msgAcao = resultado.action==='updated'?'✅ QUANTIDADE ATUALIZADA!':'✅ CADASTRADO!';
         iaMostrarStatus(msgAcao,'ok');
         document.getElementById('iaCardDados').style.display    = 'none';
@@ -5014,9 +5139,11 @@ window.iaCadastrarLivro = async function() {
         var _isbnValN = document.getElementById('iaCampoIsbn')?.value.trim() || '';
         var _tagsValN = pcs || [];
         var _catElN = document.getElementById('iaResultadoCategoria'); var _catVN = document.getElementById('iaResultadoCategoriaVal');
+        var _pratVN = document.getElementById('iaResultadoPrateleiraVal');
         var _isbnElN = document.getElementById('iaResultadoIsbn'); var _isbnVN = document.getElementById('iaResultadoIsbnVal');
         var _tagsElN = document.getElementById('iaResultadoTags');
         if(_catElN&&_catVN){ if(_catValN){_catVN.textContent=_catValN;_catElN.style.display='block';}else{_catElN.style.display='none';} }
+        if(_pratVN){ if(prateleira){ _pratVN.textContent=' (P'+prateleira.split('/').map(function(p){return p.trim();}).join('/P')+')'; _pratVN.style.display=''; }else{ _pratVN.style.display='none'; } }
         if(_isbnElN&&_isbnVN){ if(_isbnValN){_isbnVN.textContent=_isbnValN;_isbnElN.style.display='block';}else{_isbnElN.style.display='none';} }
         if(_tagsElN){ _tagsElN.innerHTML=_tagsValN.length?_tagsValN.map(function(p){return '<span class="tag-keyword tag-static">#'+p+'</span>';}).join(' '):''; }
         var capEl=document.getElementById('iaResultadoCapa');
@@ -5087,7 +5214,7 @@ async function _iaCarregarUltimosDoSupabase() {
         var sb = _iaGetSupabase();
         // Traz os mais recentes por ambos os critérios e ordena no cliente por GREATEST(data_edicao, data_cadastro)
         var r = await sb.from('livros')
-            .select('id,titulo,autor,isbn,imagem_url,categoria,pdf_url,palavras_chave,quantidade_total,quantidade_disponivel,data_cadastro,data_edicao')
+            .select('id,titulo,autor,isbn,imagem_url,categoria,prateleira,pdf_url,palavras_chave,quantidade_total,quantidade_disponivel,data_cadastro,data_edicao')
             .order('id', { ascending: false })
             .limit(50); // traz mais para ter margem de ordenação correta
         if (r.error || !r.data || !r.data.length) {
@@ -5112,7 +5239,7 @@ async function _iaCarregarUltimosDoSupabase() {
             var loc=localMap[l.id];
             return { id:l.id, titulo:l.titulo||'—', autor:l.autor||'—',
                      isbn:l.isbn||'',
-                     categoria:l.categoria||'', pdf_url:l.pdf_url||'',
+                     categoria:l.categoria||'', prateleira:l.prateleira||'', pdf_url:l.pdf_url||'',
                      palavras_chave:l.palavras_chave||[],
                      quantidade_total:l.quantidade_total||0,
                      quantidade_disponivel:l.quantidade_disponivel||0,
@@ -5155,7 +5282,7 @@ function _iaRenderHistorico(lista) {
             +'<div class="hist-titulo">ID '+h.id+': '+h.titulo+'</div>'
             +'<div class="hist-meta"><strong>AUTOR:</strong> '+(h.autor||'NÃO INFORMADO')+'</div>'
             +'<div class="hist-meta"><strong>ISBN:</strong> '+(h.isbn||'N/A')+'</div>'
-            +'<div class="hist-meta"><strong>CAT.:</strong> '+(window.spanCategoria?window.spanCategoria(h.categoria):(h.categoria||''))+'</div>'
+            +'<div class="hist-meta"><strong>CAT.:</strong> '+(window.spanCategoria?window.spanCategoria(h.categoria):(h.categoria||''))+(h.prateleira?' <span style="font-weight:700;">(P'+h.prateleira.split('/').map(function(p){return p.trim();}).join('/P')+')</span>':'')+'</div>'
             +'<div class="hist-status-row">'
             +'<div class="hist-tags">'+tagsHtml+'</div>'
             +'<span style="background:'+(disp>0?'#bbf7d0':'#fecaca')+';color:'+(disp>0?'#14532d':'#7f1d1d')+';font-weight:700;padding:0 0.15em;border-radius:2px;font-size:0.62rem;display:inline-block;">'+disp+'/'+total+' DISPONÍVEIS</span>'
@@ -5167,7 +5294,8 @@ function _iaRenderHistorico(lista) {
 
 // ── Novo livro / cancelar ─────────────────────────────────────
 window.iaNovoLivro = function() {
-    _iaFotoBase64=null; _iaCapaEditBase64=null; _iaLivroEncontrado=null; window._iaDADOS=null; _iaModoAtivo=null;
+    _iaFotoBase64=null; _iaCapaEditBase64=null; _iaCapaNovoBase64=null; _iaLivroEncontrado=null; window._iaDADOS=null; _iaModoAtivo=null;
+    _iaForcarNovoLivro = false; // Bug 2 fix: resetar flag de forçar novo
     var prev=document.getElementById('iaFotoPreview'); prev.style.display='none'; prev.src='';
     document.getElementById('iaFotoInputGaleria').value='';
     document.getElementById('iaFotoInputCamara').value='';
@@ -5197,6 +5325,8 @@ window.iaCancelarEdicao = function() {
         document.getElementById('iaAutorEncontrado').textContent=livro.autor||'—';
         document.getElementById('iaIsbnEncontradoVal').textContent=livro.isbn||'—';
         document.getElementById('iaCategoriaEncontradaVal').textContent=livro.categoria||'—';
+        var _pratVal3=document.getElementById('iaPrateleiraEncontradaVal');
+        if(_pratVal3){ if(livro.prateleira){ _pratVal3.textContent=' (P'+livro.prateleira.split('/').map(function(p){return p.trim();}).join('/P')+')'; _pratVal3.style.display=''; }else{ _pratVal3.style.display='none'; } }
         var q=livro.quantidade_total;
         document.getElementById('iaQtdEncontrada').textContent=q+(q===1?' EXEMPLAR':' EXEMPLARES');
         var _tagsEl3=document.getElementById('iaTagEncontrada');
@@ -5244,6 +5374,8 @@ async function _iaSalvarLivro(livro) {
     livro=_iaPadronizar(livro);
     if(imgUrl) livro.imagem_url=imgUrl;
     if(pdfUrl) livro.pdf_url=pdfUrl;
+    // Bug 2 fix: se _iaForcarNovoLivro, pular verificação de título e inserir direto
+    if(!_iaForcarNovoLivro){
     var r=await sb.from('livros').select('*').ilike('titulo',livro.titulo).maybeSingle();
     if(r.error) throw r.error;
     if(r.data){
@@ -5264,6 +5396,8 @@ async function _iaSalvarLivro(livro) {
         if(u.error) throw u.error;
         return {action:'updated',data:u.data};
     }
+    }
+    _iaForcarNovoLivro = false; // resetar flag após uso
     livro.id=await _iaGetProximoId();
     livro.quantidade_disponivel=livro.quantidade_total;
     livro.data_cadastro=new Date().toISOString();
@@ -5727,6 +5861,9 @@ window._iaPreAquecerDB = function() {};
               if (typeof window.carregarListaPessoas === 'function') window.carregarListaPessoas();
               // Recarrega acervo se função disponível
               if (typeof window.carregarAcervoUMD === 'function') window.carregarAcervoUMD();
+              // Bug 1 fix: invalidar cache de devoluções para refletir novo empréstimo em tempo real
+              if (typeof empsComLivroCache !== 'undefined') empsComLivroCache = [];
+              if (typeof window.carregarDevolucoes === 'function') window.carregarDevolucoes();
               window._notificarRelatorio?.();
             })
             .catch(function(err) {
@@ -5931,7 +6068,7 @@ window._iaPreAquecerDB = function() {};
       + '<div class="book-meta-box">'
       + '<div class="book-meta-item book-meta-single meta-autor"><strong>AUTOR:</strong> ' + (l.autor || 'NÃO INFORMADO') + '</div>'
       + '<div class="book-meta-item book-meta-single"><strong>ISBN:</strong> ' + (l.isbn || 'N/A') + '</div>'
-      + '<div class="book-meta-item book-meta-single meta-categoria"><strong>CAT.:</strong> ' + (window.spanCategoria?window.spanCategoria(l.categoria):(l.categoria||'')) + '</div>'
+      + '<div class="book-meta-item book-meta-single meta-categoria"><strong>CAT.:</strong> ' + (window.spanCategoria?window.spanCategoria(l.categoria):(l.categoria||'')) + (l.prateleira ? ' <span style="color:var(--text-light);font-weight:700;">(P' + l.prateleira.split('/').map(function(p){return p.trim();}).join('/P') + ')</span>' : '') + '</div>'
       + (l.pdf_url ? '<div class="book-meta-item book-meta-single"><strong>DOWNLOAD:</strong> <a href="' + l.pdf_url + '" target="_blank" style="color:var(--primary);font-weight:700;text-decoration:none">BAIXAR PDF</a></div>' : '<div class="book-meta-item book-meta-single"><strong>DOWNLOAD:</strong></div>')
       + '</div>'
       + '<div class="book-status-row stacked">'
@@ -7270,7 +7407,7 @@ window._iaPreAquecerDB = function() {};
                     { titulo: 'EJA', corpo: tabela(['#', 'Aluno', 'Leituras'], rowsLeitores(d.alunosEJARank), 'Sem dados.') }
                 ])
                 + secaoRetrail(4, 'Funcionários que mais leram', tabela(['#', 'Funcionário', 'Leituras'], topFunc, 'Nenhum funcionário com empréstimos no período.'), [])
-                + '<div style="font-size:0.66rem;color:var(--text-light);text-align:center;padding-top:0.65rem;border-top:1px solid var(--border);">' + esc(projeto) + ' v' + esc(document.querySelector('meta[name="version"]')?.getAttribute('content') || '1.5') + '</div>'
+                + '<div style="font-size:0.66rem;color:var(--text-light);text-align:center;padding-top:0.65rem;border-top:1px solid var(--border);">' + esc(projeto) + ' v' + esc(document.querySelector('meta[name="version"]')?.getAttribute('content') || '1.6') + '</div>'
                 + '</div>';
         }
         function _gerarTxt(d) {

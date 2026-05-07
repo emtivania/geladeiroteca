@@ -436,7 +436,7 @@ const DB = {
         try {
             const { data, error } = await supabase
                 .from("livros")
-                .select("id, titulo, autor, isbn, categoria, quantidade_total, quantidade_disponivel, palavras_chave, alt_text, imagem_url, pdf_url, data_cadastro, data_edicao")
+                .select("id, titulo, autor, isbn, categoria, prateleira, quantidade_total, quantidade_disponivel, palavras_chave, alt_text, imagem_url, pdf_url, data_cadastro, data_edicao")
                 .order("data_edicao", { ascending: false, nullsFirst: false })
                 .order("data_cadastro", { ascending: false });
             if (error) throw error;
@@ -517,6 +517,7 @@ const DB = {
                         autor:          livro.autor          || existente.autor,
                         isbn:           livro.isbn           || existente.isbn,
                         categoria:      livro.categoria      || existente.categoria,
+                        prateleira:     livro.prateleira     !== undefined ? livro.prateleira : existente.prateleira,
                         palavras_chave: livro.palavras_chave?.length ? livro.palavras_chave : existente.palavras_chave,
                         alt_text:       livro.alt_text       || existente.alt_text,
                     })

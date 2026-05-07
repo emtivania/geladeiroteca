@@ -59,6 +59,7 @@ CREATE TABLE IF NOT EXISTS livros (
     titulo TEXT NOT NULL,
     autor TEXT,
     categoria TEXT,
+    prateleira TEXT,
     palavras_chave TEXT[] DEFAULT '{}',
     alt_text TEXT,
     quantidade_total INTEGER NOT NULL DEFAULT 1,
@@ -142,6 +143,7 @@ FOR EACH ROW EXECUTE FUNCTION recalcular_disponivel();
 ALTER TABLE livros ADD COLUMN IF NOT EXISTS imagem_url TEXT;
 ALTER TABLE livros ADD COLUMN IF NOT EXISTS pdf_url TEXT;
 ALTER TABLE livros ADD COLUMN IF NOT EXISTS alt_text TEXT;
+ALTER TABLE livros ADD COLUMN IF NOT EXISTS prateleira TEXT;
 ALTER TABLE livros ADD COLUMN IF NOT EXISTS data_edicao TIMESTAMP WITH TIME ZONE;
 
 -- 7. TABELA DE PESSOAS (alunos e funcionários)

@@ -291,7 +291,7 @@
                             <div class="book-meta-box">
                                 <div class="book-meta-item book-meta-single meta-autor"><strong>AUTOR:</strong> ${l.autor || 'NÃO INFORMADO'}</div>
                                 <div class="book-meta-item book-meta-single"><strong>ISBN:</strong> ${l.isbn || 'N/A'}</div>
-                                <div class="book-meta-item book-meta-single meta-categoria"><strong>CAT.:</strong> ${spanCategoria(l.categoria)}</div>
+                                <div class="book-meta-item book-meta-single meta-categoria"><strong>CAT.:</strong> ${spanCategoria(l.categoria)}${l.prateleira ? ` <span style="color:var(--text-light);font-weight:700;">(P${l.prateleira.split('/').map(p=>p.trim()).join('/P')})</span>` : ''}</div>
                                 <div class="book-meta-item book-meta-single"><strong>DOWNLOAD:</strong> ${l.pdf_url ? `<a href="${l.pdf_url}" target="_blank" rel="noopener" onclick="event.stopPropagation()" style="color:var(--primary);font-weight:700;text-decoration:none;">BAIXAR PDF</a>` : ''}</div>
                             </div>
                             <div class="book-status-row stacked">
