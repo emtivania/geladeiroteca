@@ -1,4 +1,4 @@
-# Licença — GELADEIROTECA ONLINE v1.3
+# Licença — GELADEIROTECA ONLINE v1.4
 
 **GELADEIROTECA ONLINE — Sistema de Biblioteca Online**
 © 2026 [EMTI MARIA VANIA](https://github.com/emtivania)
@@ -7,7 +7,9 @@
 
 ## CC-BY 4.0
 
-Consulte o texto completo da licença para mais informações.
+Compartilhar — copiar e redistribuir o material em qualquer suporte ou formato para qualquer fim, mesmo que comercial.
+Adaptar — remixar, transformar, e criar a partir do material para qualquer fim, mesmo que comercial.
+O licenciante não pode revogar estes direitos desde que você respeite os termos da licença.
 
 🔗 [CC-BY 4.0](https://creativecommons.org/licenses/by/4.0/deed.pt-br)
 
@@ -15,7 +17,7 @@ Consulte o texto completo da licença para mais informações.
 
 ## Derivado de
 
-Este projeto é derivado do **BibVania v1.6**, desenvolvido por [Ruan Oliveira Lima](https://github.com/emtivania/bibvania).
+Este projeto é derivado do **BibVania v1.7**, desenvolvido por [Ruan Oliveira Lima](https://github.com/emtivania/bibvania).
 
 > BibVania por Ruan Oliveira Lima · https://github.com/emtivania/bibvania · CC-BY-4.0 · 2026
 

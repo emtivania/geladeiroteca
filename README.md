@@ -1,4 +1,4 @@
-# GELADEIROTECA ONLINE v1.3
+# GELADEIROTECA ONLINE v1.4
 
 **BIBLIOTECA MÓVEL DO(A) EMTI**
 PROFESSORA MARIA VÂNIA FARIAS LINHARES
@@ -112,11 +112,15 @@ const supabaseKey = "SUA_CHAVE_ANON_PUBLIC";
 
 CC-BY 4.0
 
+Compartilhar — copiar e redistribuir o material em qualquer suporte ou formato para qualquer fim, mesmo que comercial.
+Adaptar — remixar, transformar, e criar a partir do material para qualquer fim, mesmo que comercial.
+O licenciante não pode revogar estes direitos desde que você respeite os termos da licença.
+
 ---
 
 ## Derivado de
 
-> **BibVania v1.6** por [Ruan Oliveira Lima](https://github.com/emtivania/bibvania)
+> **BibVania v1.7** por [Ruan Oliveira Lima](https://github.com/emtivania/bibvania)
 > Repositório: https://github.com/emtivania/bibvania · Ano: 2026 · Licença: CC-BY-4.0
 >
 > Este projeto foi criado com o BibMaker, o criador de bibliotecas da BibVania.

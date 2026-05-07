@@ -22,7 +22,7 @@
  * com chamadas síncronas de outros scripts inline.
  *
  * @author  emtivania <https://github.com/ruanolima>
- * @version 1.6
+ * @version 1.7
  * @year    2026
  * @license CC-BY-4.0 <https://creativecommons.org/licenses/by/4.0/>
  * @source  https://github.com/emtivania/bibvania
