@@ -1748,20 +1748,3 @@ body.bibmaker-page .checkbox-container.checked {
 [data-theme="dark"] body.bibmaker-page .checkbox-container.checked {
     background: #052e16;
 }
-
-/* ── VLibras Fix: Esconde texto alt bugado quando a imagem do CDN falha ao carregar ── */
-[vw-access-button] img {
-    text-indent: -9999px !important;
-    color: transparent !important;
-    overflow: hidden !important;
-    font-size: 0 !important;
-    display: block !important;
-}
-/* Garante que o widget não vaze para fora da viewport em computadores com zoom ou resolução diferente */
-[vw] {
-    max-width: 100vw !important;
-    overflow: hidden !important;
-}
-[vw-access-button] {
-    overflow: hidden !important;
-}
