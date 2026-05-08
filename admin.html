@@ -112,7 +112,7 @@
     <meta name="author" content="EMTI MARIA VANIA">
     <meta name="license" content="CC-BY 4.0">
     <meta name="source" content="https://github.com/emtivania/geladeiroteca">
-    <meta name="version" content="1.4">
+    <meta name="version" content="1.5">
     <meta name="year" content="2026">
     <meta name="nomeprojeto" content="GELADEIROTECA ONLINE">
     <meta name="nomeesc1" content="BIBLIOTECA MÓVEL DO(A) EMTI">
@@ -202,7 +202,7 @@
     }
     .hist-capa .hist-sem-capa-label { font-size: 9px !important; }
     .info-resultado{flex:1;min-width:0;}
-    .info-resultado .titulo-livro{font-size:1rem;font-weight:800;color:var(--primary);margin-bottom:0.3rem;line-height:1.3;}
+    .info-resultado .titulo-livro{font-size:1rem;font-weight:800;color:var(--primary);margin-bottom:0.3rem;line-height:1.3;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;text-overflow:ellipsis;}
     .info-resultado .meta{font-size:0.78rem;color:var(--text-light);margin-bottom:0.15rem;}
     .badge-qtd{display:inline-block;align-self:flex-start;background:var(--success,#10b981);color:#fff;border-radius:20px;padding:0.2rem 0.7rem;font-size:0.75rem;font-weight:700;margin-top:0.5rem;}
     .historico-item{display:flex;gap:0;align-items:stretch;margin-bottom:0.3rem;overflow:hidden;border:1px solid var(--border);border-radius:var(--radius);}
@@ -212,7 +212,7 @@
     .hist-capa img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;}
     .hist-capa .hist-sem-capa-label{position:absolute;bottom:4px;left:0;right:0;text-align:center;font-size:7px;font-weight:800;color:#fff;letter-spacing:0.05em;text-shadow:0 1px 3px rgba(0,0,0,.5);pointer-events:none;}
     .hist-info{flex:1;min-width:0;padding:0.5rem 0.6rem;display:flex;flex-direction:column;gap:0;overflow:hidden;}
-    .hist-titulo{font-weight:700;font-size:0.72rem;color:var(--primary);line-height:1.3;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;}
+    .hist-titulo{font-weight:700;font-size:0.72rem;color:var(--primary);line-height:1.3;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;text-overflow:ellipsis;}
     .hist-meta{color:var(--text-light);font-size:0.66rem;line-height:1.3;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
     .hist-status-row{display:flex;flex-direction:column;gap:0.1rem;margin-top:0.1rem;align-items:flex-start;}
     .hist-tags{display:-webkit-box;-webkit-line-clamp:1;-webkit-box-orient:vertical;overflow:hidden;font-size:0.62rem;}
@@ -254,12 +254,19 @@
 
     <div class="accessibility-bar" role="toolbar" aria-label="GELADEIROTECA ONLINE">
         <button class="control-btn" onclick="window.open('https://github.com/emtivania/geladeiroteca', '_blank')" style="width:auto;padding:0 0.75rem;text-align:left;" aria-label="Abrir repositório no GitHub">📁 Repositório</button>
-        <button class="control-btn" id="btnVerificarVersao" style="width:auto;padding:0 0.75rem;text-align:left;margin-right:auto;" aria-label="Verificar se a biblioteca está atualizada">🔄 Verificando...</button>
+        <button class="control-btn" id="btnVerificarVersao" style="width:7.5rem;padding:0 0.75rem;text-align:left;margin-right:auto;font-size:0.75rem;overflow:hidden;white-space:nowrap;" aria-label="Verificar se a biblioteca está atualizada">🔄 Verificando...</button>
         <script>
         (function(){
             const btn    = document.getElementById('btnVerificarVersao');
             const banner = document.getElementById('bannerAtualizacao');
             const desc   = document.getElementById('bannerAtualizacaoDesc');
+
+            if (btn) {
+                btn.textContent = '🔄 Verificando...';
+                btn.title = 'Verificando versão...';
+                btn.style.opacity = '0.8';
+                btn.style.cursor = 'wait';
+            }
 
             // Atualiza o botão de status de versão: exibe "ATUALIZADO", "ATUALIZAR" ou "VERSÃO DESCONHECIDA" conforme comparação semver.
             function renderBtn(versaoLocal, versaoBase) {
@@ -302,10 +309,20 @@
                 }
             }
 
-            const fetchLocal  = fetch('VERSION.json?_=' + Date.now()).then(r => r.json()).catch(() => ({}));
-            const fetchRemoto = fetch('https://emtivania.github.io/bibvania/VERSION.json?_=' + Date.now()).then(r => r.json()).catch(() => ({}));
+            // Versão local: tenta VERSION.json; se falhar (ex.: 404 em subpasta), usa a
+            // meta[name="version"] do próprio documento como fallback confiável.
+            const metaVersao = document.querySelector('meta[name="version"]')?.getAttribute('content') || null;
+            const fetchLocal  = fetch('VERSION.json?_=' + Date.now())
+                .then(r => r.ok ? r.json() : Promise.reject())
+                .catch(() => metaVersao ? { bibvania: metaVersao } : {});
+            // Versão remota: sempre busca do repositório oficial para comparação.
+            const fetchRemoto = fetch('https://emtivania.github.io/bibvania/VERSION.json?_=' + Date.now())
+                .then(r => r.ok ? r.json() : Promise.reject())
+                .catch(() => ({}));
 
-            Promise.all([fetchLocal, fetchRemoto]).then(([local, remoto]) => {
+            // Promise.all com um delay mínimo de 800ms para que o usuário perceba o feedback de "Verificando..."
+            const delayMinimo = new Promise(res => setTimeout(res, 800));
+            Promise.all([fetchLocal, fetchRemoto, delayMinimo]).then(([local, remoto]) => {
                 renderBtn(local.bibvania || '?', remoto.bibvania || '?');
             });
         })();
@@ -508,7 +525,7 @@
                     <button class="btn btn-success" id="iaBtnSalvarQtd" onclick="iaSalvarQuantidadeRapida()" style="margin-top:0.5rem;" disabled>💾 SALVAR NOVA QUANTIDADE</button>
                     <button class="btn btn-primary" id="iaBtnEditarComIA" onclick="iaEditarComIA()" style="margin-top:0.5rem;">✨ EDITAR COM IA</button>
                     <button class="btn" onclick="iaEditarManual()" style="margin-top:0.5rem;background:#5bc4c0;color:#fff;">✏️ EDITAR</button>
-                    <button class="btn" onclick="iaCadastrarComoNovoComIA()" style="margin-top:0.5rem;background:#7c3aed;color:#fff;" title="Cadastra como novo livro com novo ID — útil para mesma obra com editora ou edição diferente">🆕 CADASTRAR COMO NOVO COM IA</button>
+                    <button class="btn" id="iaBtnCadastrarNovoComIA" onclick="iaCadastrarComoNovoComIA(this)" style="margin-top:0.5rem;background:#7c3aed;color:#fff;" title="Cadastra como novo livro com novo ID — útil para mesma obra com editora ou edição diferente">🆕 CADASTRAR COMO NOVO COM IA</button>
                     <button class="btn btn-outline" onclick="iaNovoLivro()" style="margin-top:0.5rem;">🔄 NOVO LIVRO</button>
                 </div>
 
@@ -1613,6 +1630,7 @@
             if (tabSalva === 'tab-listapessoas') window._tabPendente = 'tab-listapessoas';
             if (tabSalva === 'tab-registro')     window._tabPendente = 'tab-registro';
             if (tabSalva === 'tab-cadastro-ia')  window._tabPendente = 'tab-cadastro-ia';
+            if (tabSalva === 'tab-relatorio')    window._tabPendente = 'tab-relatorio';
 
             // Carregar livros e pessoas em paralelo
             Promise.all([
@@ -1629,6 +1647,7 @@
                     if (pendente === 'tab-devolucoes')   { window.carregarDevolucoes?.(); }
                     if (pendente === 'tab-listapessoas') { window.carregarListaPessoas?.(); }
                     if (pendente === 'tab-cadastro-ia')  { window.iaInitOnce?.(); }
+                    if (pendente === 'tab-relatorio')    { if (window.relGerar) { if (window._initFiltrosRel) window._initFiltrosRel(); window.relGerar(); } }
                 }
             });
         }
@@ -1831,6 +1850,14 @@
                 });
             })();
 
+            // Re-renderizar accordions de empréstimos que estejam abertos na tela
+            // sem isso, o usuário precisa fechar e abrir o card para ver os dados novos
+            document.querySelectorAll('[id$="det-"][class*="active"], [id*="-det-"][class*="active"]').forEach(function(el) {
+                // id no formato: adm-det-123 ou adm-atr-det-123
+                var m = el.id.match(/^(adm-(?:atr-)?)det-(\d+)$/);
+                if (m) loadEmps(m[2], m[1]);
+            });
+
             // Se a aba de devoluções estiver visível, recarregar com join
             if (document.getElementById('tab-devolucoes').classList.contains('active')) {
                 carregarDevolucoes();
@@ -1899,6 +1926,33 @@
             const _navWrapperAdmin = document.getElementById('acervo-nav-wrapper-admin');
             if (nav && _navWrapperAdmin) { _navWrapperAdmin.innerHTML = ''; _navWrapperAdmin.appendChild(nav); }
             _injetarCapasAdmin(lote, token);
+            _prefetchCapasVizinhasAdmin(_paginaAtualAdmin, token);
+        }
+
+        // Pré-carrega as capas dos livros vizinhos (anterior e próximo) em background.
+        // Usa new Image() para popular o cache do browser sem tocar no DOM.
+        function _prefetchCapasVizinhasAdmin(paginaAtual, token) {
+            if (token !== _renderToken) return;
+            const vizinhos = [-1, 1, -2, 2]; // ordem de prioridade: imediatos primeiro
+            const total = _filtradosAtualAdmin.length;
+            vizinhos.forEach(offset => {
+                const idx = ((paginaAtual + offset) % total + total) % total;
+                const livro = _filtradosAtualAdmin[idx];
+                if (!livro || !livro.imagem_url || livro._capaResolvida === 'sem') return;
+                // Só pré-carrega se ainda não está em cache
+                if (livro._capaResolvida === 'tem') return;
+                const img = new Image();
+                img.onload = () => {
+                    if (img.naturalWidth > 0 && img.naturalWidth === img.naturalHeight && img.naturalWidth <= 300) {
+                        livro._capaResolvida = 'sem'; livro.imagem_url = null;
+                        if (_idsComCapaCache) _idsComCapaCache.delete(livro.id);
+                    } else {
+                        livro._capaResolvida = 'tem';
+                    }
+                };
+                img.onerror = () => { livro._capaResolvida = 'sem'; livro.imagem_url = null; };
+                img.src = livro.imagem_url;
+            });
         }
 
         // Atualiza o contador "X / Y" do nav do carrossel admin.
@@ -2006,6 +2060,7 @@
             const _nwa = document.getElementById('acervo-nav-wrapper-admin');
             if (_nwa) { _nwa.innerHTML = ''; _nwa.appendChild(nav); } else { lista.appendChild(nav); }
             _atualizarNavAdmin();
+            _prefetchCapasVizinhasAdmin(0, token);
             _jaCarregouUmaVez = true;
             _renderEmAndamento = false;
         }
@@ -2021,48 +2076,56 @@
         function _injetarCapasAdmin(lote, renderToken) {
             lote.forEach(l => {
                 const wrap = document.querySelector(`[data-livro-id="${l.id}"]`);
+                const card = wrap?.closest('.book-item');
+                if (card) card.style.opacity = '0'; // Esconde o card até estar pronto
+
                 if (!l.imagem_url || l._capaResolvida === 'sem') {
                     l._capaResolvida = 'sem';
                     if (wrap && !wrap.classList.contains('capa-carregada')) {
                         wrap.classList.add('sem-capa', 'capa-carregada');
                         _setLabelSemCapa(wrap);
                     }
+                    if (card) card.style.opacity = '1';
                     return;
                 }
-                // Se capa já foi resolvida como 'tem' e o wrap já tem a imagem, nada a fazer
-                if (l._capaResolvida === 'tem' && wrap && wrap.classList.contains('capa-carregada')) return;
-
+                if (l._capaResolvida === 'tem' && wrap && wrap.classList.contains('capa-carregada')) {
+                    if (card) card.style.opacity = '1';
+                    return;
+                }
                 if (!wrap) return;
                 const img = wrap.querySelector('img.cover-img');
                 if (!img) return;
 
-                const url = l.imagem_url;
-                img.style.opacity = '0';
-                img.onload = () => {
-                    // Detectar ícone placeholder quadrado pequeno (mesmo critério do preload anterior)
-                    if (img.naturalWidth > 0 && img.naturalWidth === img.naturalHeight && img.naturalWidth <= 300) {
+                const tempImg = new Image();
+                tempImg.fetchPriority = 'high';
+                tempImg.onload = () => {
+                    if (renderToken !== _renderToken) return;
+                    if (tempImg.naturalWidth > 0 && tempImg.naturalWidth === tempImg.naturalHeight && tempImg.naturalWidth <= 300) {
                         l._capaResolvida = 'sem'; l.imagem_url = null;
                         if (_idsComCapaCache) _idsComCapaCache.delete(l.id);
-                        img.style.opacity = '0';
                         wrap.classList.add('sem-capa', 'capa-carregada');
                         _setLabelSemCapa(wrap);
+                        if (card) card.style.opacity = '1';
                         return;
                     }
                     l._capaResolvida = 'tem';
+                    img.src = tempImg.src;
                     wrap.classList.remove('sem-capa');
                     wrap.classList.add('has-image', 'capa-carregada');
                     const lbl = wrap.querySelector('.book-cover-label');
                     if (lbl) lbl.style.display = 'none';
-                    img.style.transition = 'opacity 0.25s ease';
                     img.style.opacity = '1';
+                    if (card) card.style.opacity = '1';
                 };
-                img.onerror = () => {
+                tempImg.onerror = () => {
+                    if (renderToken !== _renderToken) return;
                     l._capaResolvida = 'sem'; l.imagem_url = null;
                     if (_idsComCapaCache) _idsComCapaCache.delete(l.id);
                     wrap.classList.add('sem-capa', 'capa-carregada');
                     _setLabelSemCapa(wrap);
+                    if (card) card.style.opacity = '1';
                 };
-                img.src = url;
+                tempImg.src = l.imagem_url;
             });
         }
 
@@ -2075,9 +2138,12 @@
                 lbl.setAttribute('aria-hidden', 'true');
                 wrap.insertBefore(lbl, wrap.firstChild);
             }
-            lbl.innerHTML = 'SEM<br>CAPA';
+            lbl.innerHTML = '<img src="logo.png" style="width:40px;height:auto;margin-bottom:8px;opacity:0.4;filter:grayscale(1);" alt=""><br>SEM<br>CAPA';
             lbl.style.fontSize = '9px';
-            lbl.style.display = '';
+            lbl.style.display = 'flex';
+            lbl.style.flexDirection = 'column';
+            lbl.style.alignItems = 'center';
+            lbl.style.justifyContent = 'center';
         }
 
         /**
@@ -2660,12 +2726,17 @@
                         dias_emprestimo: dias
                     };
 
-                    // Se informou data manual, calcular data prevista a partir dela
-                    if (!semData && dataInput) {
-                        var base = new Date(dataInput + 'T12:00:00');
-                        var prev = new Date(base);
-                        prev.setDate(prev.getDate() + dias);
-                        payload.data_prevista_devolucao = prev.toISOString().split('T')[0];
+                    // Calcular data_prevista_devolucao sempre que não for sem prazo
+                    if (!semData) {
+                        // Base: data digitada no campo, ou data original do empréstimo
+                        var baseStr = dataInput || (_edtEmpAtual && _edtEmpAtual.data_emprestimo ? _edtEmpAtual.data_emprestimo.split('T')[0] : '');
+                        if (baseStr) {
+                            var base = new Date(baseStr + 'T12:00:00');
+                            if (dataInput) payload.data_emprestimo = base.toISOString(); // só atualiza no banco se mudou
+                            var prev = new Date(base);
+                            prev.setDate(prev.getDate() + dias);
+                            payload.data_prevista_devolucao = prev.toISOString().split('T')[0];
+                        }
                     }
 
                     d2.btnSalvar.textContent = 'SALVANDO...';
@@ -2674,8 +2745,25 @@
                         await window.DB.atualizarEmprestimo(payload);
                         d2.modal.classList.add('hidden');
                         window.mostrarMsg('msgEmp', '✓ EMPRÉSTIMO ATUALIZADO!', 'success');
+                        // Atualizar entry no cache in-place para refletir imediatamente sem precisar recarregar
+                        const idx = empsComLivroCache.findIndex(x => x.id === payload.id);
+                        if (idx !== -1) {
+                            empsComLivroCache[idx] = Object.assign({}, empsComLivroCache[idx], {
+                                nome_aluno: payload.nome_aluno,
+                                sexo: payload.sexo,
+                                ano_aluno: payload.ano_aluno,
+                                turma_aluno: payload.turma_aluno,
+                                sem_data_definida: payload.sem_data_definida,
+                                dias_emprestimo: payload.dias_emprestimo,
+                                data_emprestimo: payload.data_emprestimo || empsComLivroCache[idx].data_emprestimo,
+                                data_prevista_devolucao: payload.data_prevista_devolucao || (payload.sem_data_definida ? null : empsComLivroCache[idx].data_prevista_devolucao)
+                            });
+                            window._empsComLivroCache = empsComLivroCache;
+                        } else {
+                            empsComLivroCache = []; // fallback: invalidar se não encontrado
+                        }
+                        renderDevolucoes();
                         load();
-                        carregarDevolucoes();
                         window._notificarRelatorio?.();
                     } catch(err) {
                         _msg('❌ ERRO: ' + err.message, 'danger');
@@ -2777,10 +2865,11 @@
                 }
                 
                 
-                // Calcular nova data a partir de hoje (se sem prazo) ou da data prevista atual
+                // Calcular nova data a partir da data prevista atual (ou data_emprestimo se sem prazo)
                 let novaData;
                 if (emprestimo.sem_data_definida || !emprestimo.data_prevista_devolucao) {
-                    novaData = new Date();
+                    // Sem prazo: renova a partir da data original do empréstimo, não de "hoje"
+                    novaData = emprestimo.data_emprestimo ? new Date(emprestimo.data_emprestimo) : new Date();
                 } else {
                     novaData = new Date(emprestimo.data_prevista_devolucao);
                 }
@@ -3696,8 +3785,26 @@
         // renderDevolucoes(): usa cache local — instantâneo, sem chamada ao banco
         function renderDevolucoes() {
             const _scrollY = window.scrollY;
+            // Salvar quais acordeões estão abertos para restaurar após re-render
+            const _abertos = new Set();
+            document.querySelectorAll('#tab-devolucoes .book-details.active').forEach(el => {
+                if (el.id) _abertos.add(el.id);
+            });
             _criarNavDevolucoes();
             _renderPaginaDevAtual();
+            // Restaurar acordeões que estavam abertos
+            if (_abertos.size > 0) {
+                requestAnimationFrame(() => {
+                    _abertos.forEach(id => {
+                        const el  = document.getElementById(id);
+                        const ind = document.getElementById(id + '-ind');
+                        if (el && !el.classList.contains('active')) {
+                            el.classList.add('active');
+                            if (ind) ind.style.transform = 'rotate(180deg)';
+                        }
+                    });
+                });
+            }
             requestAnimationFrame(() => window.scrollTo({ top: _scrollY, behavior: 'instant' }));
         }
 
@@ -3737,8 +3844,12 @@
 
         // carregarDevolucoes(): mantido por compatibilidade — renderiza do cache e atualiza em segundo plano
         window.carregarDevolucoes = async () => {
+            // Sincronizar com invalidações feitas pelo bloco UMD via window._empsComLivroCache
+            if (window._empsComLivroCache && window._empsComLivroCache !== empsComLivroCache) {
+                empsComLivroCache = window._empsComLivroCache;
+            }
             if (!empsComLivroCache.length) {
-                // Buscar com join só quando a aba for aberta pela primeira vez
+                // Buscar com join quando cache foi invalidado ou na primeira abertura
                 try {
                     empsComLivroCache = await window.DB.getEmprestimosAtivosComLivro();
                     window._empsComLivroCache = empsComLivroCache;
@@ -3800,7 +3911,7 @@
                             <div style="display:flex;gap:0.4rem;flex-wrap:wrap;">
                                 <button onclick="devolverEAtualizar(${e.id})" class="btn-small btn-success" style="flex:1;min-width:80px;">DEVOLVER</button>
                                 <button onclick="openEditEmp(${JSON.stringify(e).replace(/\"/g, '&quot;')})" class="btn-small btn-primary" style="flex:1;min-width:80px;">EDITAR</button>
-                                <button onclick="openRenovarEmp(${e.id})" class="btn-small" style="background:var(--warning);color:white;flex:1;min-width:80px;">RENOVAR</button>
+                                <button onclick="openRenovarEmp(${e.id})" class="btn-small" style="background:var(--warning);color:white;flex:1;min-width:80px;" ${e.sem_data_definida ? 'disabled title="Não é possível renovar um empréstimo sem data definida"' : ''}>RENOVAR</button>
                                 <button onclick="delEmpEAtualizar(${e.id})" class="btn-small btn-danger" style="flex:1;min-width:80px;">EXCLUIR</button>
                             </div>
                         </div>`;
@@ -3840,6 +3951,17 @@
             const el  = document.getElementById(id);
             const ind = document.getElementById(id + '-ind');
             if (!el) return;
+            const abrindo = !el.classList.contains('active');
+            // Fechar todos os outros cards abertos antes de abrir o novo
+            if (abrindo) {
+                document.querySelectorAll('#tab-devolucoes .book-details.active').forEach(outros => {
+                    if (outros.id && outros.id !== id) {
+                        outros.classList.remove('active');
+                        const outroInd = document.getElementById(outros.id + '-ind');
+                        if (outroInd) outroInd.style.transform = '';
+                    }
+                });
+            }
             el.classList.toggle('active');
             if (ind) ind.style.transform = el.classList.contains('active') ? 'rotate(180deg)' : '';
         };
@@ -3850,6 +3972,7 @@
             if (data === null) return;
             try {
                 await window.DB.registrarDevolucao(id, data);
+                empsComLivroCache = []; // invalidar para sumir imediatamente da lista
                 load();
                 carregarDevolucoes();
                 window._notificarRelatorio?.();
@@ -3894,9 +4017,17 @@
         // ── FIM ABA DEVOLUÇÕES ────────────────────────────────────────────────
     </script>
 </main>
-    <div vw class="enabled"><div vw-access-button class="active"></div><div vw-plugin-wrapper><div class="vw-plugin-top-wrapper"></div></div></div>
+    <!-- VLibras — Libras accessibility widget -->
+    <div vw class="enabled">
+        <div vw-access-button class="active"></div>
+        <div vw-plugin-wrapper>
+            <div class="vw-plugin-top-wrapper"></div>
+        </div>
+    </div>
     <script src="https://vlibras.gov.br/app/vlibras-plugin.js"></script>
-    <script>new window.VLibras.Widget('https://vlibras.gov.br/app');</script>
+    <script>
+        new window.VLibras.Widget('https://vlibras.gov.br/app');
+    </script>
 
     <script>
     // ── PDF helper ────────────────────────────────────────────────────────────
@@ -4189,8 +4320,7 @@
         }, true); // true = captura, antes do toggleAccordion
     </script>
     <footer style="text-align:center;padding:1.5rem 1rem;font-size:0.7rem;color:var(--text-light);border-top:1px solid var(--border);margin-top:2rem;" aria-label="Rodapé">
-        <p><span id="footerNome">BibVania</span> V<span id="footerVersion">1.7</span> &copy; <span id="footerYear">2026</span> <a id="footerAuthorLink" href="https://github.com/ruanoliva" rel="author noopener" style="color:inherit;"><span id="footerAuthor">Ruan Oliveira Lima</span></a> &mdash; <a href="https://creativecommons.org/licenses/by/4.0/" rel="license noopener" style="color:inherit;">CC-BY-4.0</a> &mdash; <a id="footerSourceLink" href="https://github.com/emtivania/bibvania" rel="noopener" style="color:inherit;">GitHub</a></p>
-        <script>(function(){var m=function(n){return document.querySelector('meta[name="'+n+'"]')?.getAttribute('content')||null;};var set=function(id,val){var e=document.getElementById(id);if(e&&val)e.textContent=val;};set('footerNome',m('nomeprojeto'));set('footerVersion',m('version'));set('footerYear',m('year'));set('footerAuthor',m('author'));var src=m('source');if(src){var a=document.getElementById('footerSourceLink');if(a)a.href=src;}})();</script>
+        <p>GELADEIROTECA ONLINE v1.5 &copy; 2026 <a href="https://github.com/emtivania" rel="author noopener" style="color:inherit;">EMTI MARIA VANIA</a> &mdash; <a href="https://creativecommons.org/licenses/by/4.0/deed.pt-br" rel="license noopener" style="color:inherit;">CC-BY 4.0</a> &mdash; <a href="https://github.com/emtivania/geladeiroteca" rel="noopener" style="color:inherit;">GitHub</a> &nbsp;|&nbsp; criado com <a href="bibmaker.html" target="_blank" rel="noopener" style="color:inherit;">BibMaker v1.5</a> &mdash; Construtor de Biblioteca Online da BibVania &nbsp;|&nbsp; BibVania v1.8 &copy; 2026 <a href="https://github.com/ruanolima" rel="author noopener" style="color:inherit;">Ruan Oliveira Lima</a> &mdash; <a href="https://creativecommons.org/licenses/by/4.0/" rel="license noopener" style="color:inherit;">CC-BY-4.0</a> &mdash; <a href="https://github.com/emtivania/bibvania" rel="noopener" style="color:inherit;">GitHub</a></p>
     </footer>
 <!-- Supabase UMD para o módulo CADASTRO IA -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
@@ -4463,7 +4593,7 @@ async function iaChamarGroq(base64) {
     var cats = (window.DB && window.DB.CATEGORIAS) || IA_CATS;
     var catsList = Array.isArray(cats) ? cats.join(', ') : cats;
 
-    var prompt = 'Você é um catalogador expert de biblioteca escolar brasileira. Analise a capa do livro com máxima atenção e responda APENAS com um objeto JSON válido, sem markdown, sem explicações.\n\nREGRAS ABSOLUTAS — NUNCA viole:\n\n1. titulo (string MAIÚSCULAS, NUNCA vazio): transcreva EXATAMENTE como aparece na capa. Preserve acentos. Inclua subtítulo se houver, separado por \": \". Se ilegível, use \"SEM TÍTULO\". NUNCA invente palavras.\n\n2. autor (string MAIÚSCULAS ou \"N/A\"): nome do autor principal como aparece na capa. Se houver múltiplos autores, use SOMENTE O PRIMEIRO. IMPORTANTE: se não houver autor visível na capa, retorne \"N/A\". NUNCA use o nome da editora, da instituição ou da empresa como autor. Editora não é autor.\n\n3. isbn (string só dígitos, ou null): SOMENTE inclua se você conseguir ler com clareza um ISBN-10 ou ISBN-13. Se houver qualquer dúvida, retorne null. NUNCA invente ISBNs.\n\n4. categoria (string, NUNCA vazio, NUNCA null): escolha OBRIGATORIAMENTE UMA das opções: ' + catsList + '\n\nREGRAS CRÍTICAS PARA CATEGORIA:\n\nATENÇÃO — ELEMENTOS VISUAIS DA CAPA NÃO DETERMINAM CATEGORIA: A presença de crianças, ilustrações infantis ou palavras como \"criança\", \"menino\", \"menina\", \"maternidade\", \"família\" no título ou na capa NÃO é suficiente para classificar como INFANTIL ou INFANTOJUVENIL. O que determina a categoria é o CONTEÚDO REAL e o PÚBLICO-ALVO do livro. Exemplos: um livro sobre maternidade atípica é DE REFERÊNCIA, não INFANTIL; um dicionário com criança na capa é DE REFERÊNCIA, não INFANTIL.\n\n— LIVROS PARADIDÁTICOS (de leitura, não didáticos):\n\nINFANTIL (1º AO 4º): livros de leitura para crianças pequenas com linguagem e ilustrações muito simples.\nINFANTOJUVENIL (5º E 6º): livros de leitura para crianças e pré-adolescentes. Se houver DÚVIDA entre INFANTIL e INFANTOJUVENIL, use INFANTOJUVENIL.\nJUVENIL (7º AO 9º): livros de leitura para adolescentes. Se houver DÚVIDA entre INFANTOJUVENIL e JUVENIL, use JUVENIL. Se houver DÚVIDA entre JUVENIL e JOVEM ADULTO, use JOVEM ADULTO (ENSINO MÉDIO) — EXCETO se a capa indicar explicitamente que é do Ensino Fundamental (6º ao 9º ano), nesse caso use JUVENIL.\nJOVEM ADULTO (ENSINO MÉDIO): livros de leitura/literatura destinados ao Ensino Médio. ATENÇÃO: livros infantojuvenis e juvenis NUNCA devem ser classificados como JOVEM ADULTO (ENSINO MÉDIO), mesmo em caso de dúvida — a regra de dúvida entre JUVENIL e JOVEM ADULTO se aplica APENAS quando o livro claramente não é voltado para o Ensino Fundamental.\nCLÁSSICOS: use SOMENTE para obras com reconhecimento literário universal ou que integram o cânone literário ocidental/mundial — ex: Shakespeare, Machado de Assis, Dostoiévski, Homero, Dante, Victor Hugo, Eça de Queirós — OU livros brasileiros com 100 anos ou mais de publicação. NÃO use para literatura popular, regional, cordel ou autores contemporâneos, mesmo que sejam bons livros.\nREGIONAIS: livros brasileiros com menos de 100 anos de publicação cujo tema, ambientação, linguagem ou autoria seja CLARAMENTE vinculado a uma região, estado ou município específico do Brasil (ex: literatura nordestina contemporânea, autores cearenses, histórias ambientadas no sertão, na Amazônia, no Sul etc.). NÃO use para obras canônicas/clássicas mesmo que de autor brasileiro. IMPORTANTE: se o livro for brasileiro contemporâneo e regional — e também for em verso/cordel — prevalece POESIA, não REGIONAIS.\nPOESIA: use SOMENTE para livros cujo conteúdo principal É poesia (coletâneas, livros de poemas, cordel). IMPORTANTE: se o livro CONTÉM poemas, deve ser POESIA — mesmo que pareça infantil, juvenil, regional ou clássico: a presença de poemas prevalece sobre qualquer outra característica. NÃO use para livros que estudam, analisam ou ensinam SOBRE poesia (teoria literária, métrica, análise poética) — esses vão em DE REFERÊNCIA.\nDE REFERÊNCIA: livros de estudo, formação e consulta NÃO didáticos. Inclui: (A) dicionários, atlas, enciclopédias, manuais, paradidáticos de apoio escolar; (B) livros de formação de professores e profissionais da educação (incluindo educação inclusiva/especial, AEE, LIBRAS, neurodiversidade, deficiência); (C) livros acadêmicos sobre inclusão escolar; (D) livros que estudam ou analisam poesia sem serem livros de poemas. NÃO use para literatura infantil, juvenil ou regional. REGRA CRÍTICA: se na capa NÃO aparecer explicitamente o tipo de ensino (Fundamental, Médio, EJA) E o ano/série E a matéria/disciplina, use DE REFERÊNCIA — nunca presuma que é didático.\n\n— LIVROS DIDÁTICOS (exigem OBRIGATORIAMENTE os TRÊS elementos visíveis na capa: tipo de ensino + ano/série + matéria/disciplina):\nDIDÁTICO (EF 1º) a DIDÁTICO (EF 9º): Ensino Fundamental, anos 1 ao 9.\nDIDÁTICO (EM 1º) a DIDÁTICO (EM 3º): Ensino Médio, anos 1 ao 3.\nDIDÁTICO (EJAF): EJA Fundamental.\nDIDÁTICO (EJAM): EJA Médio.\nATENÇÃO CRÍTICA: use categoria DIDÁTICO apenas se os TRÊS elementos estiverem claramente visíveis e legíveis na capa: (1) tipo de ensino, (2) ano ou série, (3) matéria ou disciplina. Se QUALQUER UM dos três estiver ausente ou duvidoso na capa — mesmo que o livro pareça didático pelo visual — use DE REFERÊNCIA.\nO que conta como TIPO DE ENSINO válido: palavras como \\\"Ensino Fundamental\\\", \\\"Ensino Médio\\\", \\\"EJA\\\", \\\"Anos Iniciais\\\", \\\"Anos Finais\\\", ou abreviações como \\\"EF\\\", \\\"EM\\\", \\\"1º ao 5º ano\\\", \\\"6º ao 9º ano\\\". O que NÃO conta como tipo de ensino: o título do livro, o nome da matéria sozinho, ilustrações infantis, faixa etária implícita ou qualquer inferência visual.\nExemplos: \\\"Ensinar e Aprender Histórias\\\" sem indicação de nível e série → DE REFERÊNCIA (o título menciona histórias mas isso não é matéria+nível+série). \\\"Matemática\\\" sem indicar série e nível de ensino → DE REFERÊNCIA. \\\"Língua Portuguesa — 3º Ano — Ensino Fundamental\\\" → DIDÁTICO (EF 3º).\n\n5. palavras_chave (array com EXATAMENTE 1 string em minúsculas, NUNCA vazio): tema/gênero principal. Ex: \"aventura\", \"matemática\", \"poesia\". NUNCA vazio. REGRA ESPECIAL: se o livro for voltado para educação especial, inclusão escolar, AEE, LIBRAS, neurodiversidade, autismo, deficiência intelectual, deficiência física, transtornos de aprendizagem, altas habilidades/superdotação ou qualquer tema de educação inclusiva, a palavra_chave OBRIGATORIAMENTE deve ser \"educação especial\" ou um termo específico do tema (ex: \"libras\", \"autismo\", \"aee\", \"neurodiversidade\"). NUNCA use \"literatura\" como fallback nesses casos.\n\n6. alt_text (string, máx 100 chars): descreva a capa em 1 frase objetiva.\n\nResponda SOMENTE o JSON, começando com { e terminando com }.';
+    var prompt = 'Você é um catalogador expert de biblioteca escolar brasileira. Analise a capa do livro com máxima atenção e responda APENAS com um objeto JSON válido, sem markdown, sem explicações.\n\nREGRAS ABSOLUTAS — NUNCA viole:\n\n1. titulo (string MAIÚSCULAS, NUNCA vazio): transcreva EXATAMENTE como aparece na capa. Preserve acentos. Inclua subtítulo se houver, separado por \": \". Se ilegível, use \"SEM TÍTULO\". NUNCA invente palavras.\n\n2. autor (string MAIÚSCULAS ou \"N/A\"): nome do autor principal como aparece na capa. Se houver múltiplos autores, use SOMENTE O PRIMEIRO. IMPORTANTE: se não houver autor visível na capa, retorne \"N/A\". NUNCA use o nome da editora, da instituição ou da empresa como autor. Editora não é autor.\n\n3. isbn (string só dígitos, ou null): SOMENTE inclua se você conseguir ler com clareza um ISBN-10 ou ISBN-13. Se houver qualquer dúvida, retorne null. NUNCA invente ISBNs.\n\n4. categoria (string, NUNCA vazio, NUNCA null): escolha OBRIGATORIAMENTE UMA das opções: ' + catsList + '\n\nREGRAS CRÍTICAS PARA CATEGORIA:\n\nATENÇÃO — ELEMENTOS VISUAIS DA CAPA NÃO DETERMINAM CATEGORIA: A presença de crianças, ilustrações infantis ou palavras como \"criança\", \"menino\", \"menina\", \"maternidade\", \"família\" no título ou na capa NÃO é suficiente para classificar como INFANTIL ou INFANTOJUVENIL. O que determina a categoria é o CONTEÚDO REAL e o PÚBLICO-ALVO do livro. Exemplos: um livro sobre maternidade atípica é DE REFERÊNCIA, não INFANTIL; um dicionário com criança na capa é DE REFERÊNCIA, não INFANTIL.\n\n— LIVROS PARADIDÁTICOS (de leitura, não didáticos):\n\nINFANTIL (1º AO 4º): livros de leitura para crianças pequenas com linguagem e ilustrações muito simples.\nINFANTOJUVENIL (5º E 6º): livros de leitura para crianças e pré-adolescentes. Se houver DÚVIDA entre INFANTIL e INFANTOJUVENIL, use INFANTOJUVENIL.\nJUVENIL (7º AO 9º): livros de leitura para adolescentes. Se houver DÚVIDA entre INFANTOJUVENIL e JUVENIL, use JUVENIL. Se houver DÚVIDA entre JUVENIL e JOVEM ADULTO, use JOVEM ADULTO (ENSINO MÉDIO) — EXCETO se a capa indicar explicitamente que é do Ensino Fundamental (6º ao 9º ano), nesse caso use JUVENIL.\nJOVEM ADULTO (ENSINO MÉDIO): livros de leitura/literatura destinados ao Ensino Médio. ATENÇÃO: livros infantojuvenis e juvenis NUNCA devem ser classificados como JOVEM ADULTO (ENSINO MÉDIO), mesmo em caso de dúvida — a regra de dúvida entre JUVENIL e JOVEM ADULTO se aplica APENAS quando o livro claramente não é voltado para o Ensino Fundamental.\nCLÁSSICOS: use SOMENTE para obras com reconhecimento literário universal ou que integram o cânone literário ocidental/mundial — ex: Shakespeare, Machado de Assis, Dostoiévski, Homero, Dante, Victor Hugo, Eça de Queirós — OU livros brasileiros com 100 anos ou mais de publicação. NÃO use para literatura popular, regional, cordel ou autores contemporâneos, mesmo que sejam bons livros.\nREGIONAIS: livros brasileiros com menos de 100 anos de publicação cujo tema, ambientação, linguagem ou autoria seja CLARAMENTE vinculado a uma região, estado ou município específico do Brasil (ex: literatura nordestina contemporânea, autores cearenses, histórias ambientadas no sertão, na Amazônia, no Sul etc.). NÃO use para obras canônicas/clássicas mesmo que de autor brasileiro. IMPORTANTE: se o livro for brasileiro contemporâneo e regional — e também for em verso/cordel — prevalece POESIA, não REGIONAIS.\nPOESIA: use SOMENTE para livros cujo conteúdo principal É poesia (coletâneas, livros de poemas, cordel). IMPORTANTE: se o livro CONTÉM poemas, deve ser POESIA — mesmo que pareça infantil, juvenil, regional ou clássico: a presença de poemas prevalece sobre qualquer outra característica. NÃO use para livros que estudam, analisam ou ensinam SOBRE poesia (teoria literária, métrica, análise poética) — esses vão em DE REFERÊNCIA.\nDE REFERÊNCIA: livros de estudo, formação e consulta NÃO didáticos. Inclui: (A) dicionários, atlas, enciclopédias, manuais, paradidáticos de apoio escolar; (B) livros de formação de professores e profissionais da educação (incluindo educação inclusiva/especial, AEE, LIBRAS, neurodiversidade, deficiência); (C) livros acadêmicos sobre inclusão escolar; (D) livros que estudam ou analisam poesia sem serem livros de poemas. NÃO use para literatura infantil, juvenil ou regional. REGRA CRÍTICA: se na capa NÃO aparecer explicitamente o tipo de ensino (Fundamental, Médio, EJA) E o ano/série E a matéria/disciplina, use DE REFERÊNCIA — nunca presuma que é didático.\n\n— LIVROS DIDÁTICOS (exigem OBRIGATORIAMENTE os TRÊS elementos visíveis na capa: tipo de ensino + ano/série + matéria/disciplina):\nDIDÁTICO (EF 1º) a DIDÁTICO (EF 9º): Ensino Fundamental, anos 1 ao 9.\nDIDÁTICO (EM 1º) a DIDÁTICO (EM 3º): Ensino Médio, anos 1 ao 3.\nDIDÁTICO (EJAF): EJA Fundamental.\nDIDÁTICO (EJAM): EJA Médio.\nATENÇÃO CRÍTICA: use categoria DIDÁTICO apenas se os TRÊS elementos estiverem claramente visíveis e legíveis na capa: (1) tipo de ensino, (2) ano ou série, (3) matéria ou disciplina. Se QUALQUER UM dos três estiver ausente ou duvidoso na capa — mesmo que o livro pareça didático pelo visual — use DE REFERÊNCIA.\nO que conta como TIPO DE ENSINO válido: palavras como \\\"Ensino Fundamental\\\", \\\"Ensino Médio\\\", \\\"EJA\\\", \\\"Anos Iniciais\\\", \\\"Anos Finais\\\", ou abreviações como \\\"EF\\\", \\\"EM\\\", \\\"1º ao 5º ano\\\", \\\"6º ao 9º ano\\\". O que NÃO conta como tipo de ensino: o título do livro, o nome da matéria sozinho, ilustrações infantis, faixa etária implícita ou qualquer inferência visual.\\nATENÇÃO ESPECIAL — \\\\\\"Anos Iniciais\\\\\\" e \\\\\\"Anos Finais\\\\\\" SOZINHOS: mesmo que apareçam na capa, NÃO classificam como DIDÁTICO se não houver TAMBÉM o número do ano/série E a matéria/disciplina. Ex: \\\\\\"Teatro e Dança nos Anos Iniciais\\\\\\" → DE REFERÊNCIA (metodologia para professor, sem série e sem disciplina separada). \\\\\\"Educação Física — 3º Ano — Anos Iniciais\\\\\\" → DIDÁTICO (EF 3º).\\nATENÇÃO ESPECIAL — LIVROS DE METODOLOGIA E PEDAGOGIA: livros que ensinam COMO ENSINAR uma matéria (ex: \\\\\\"Estratégias de Leitura\\\\\\", \\\\\\"Leitura e Escrita: Como Aprender com Êxito por Meio da Pedagogia por Projetos\\\\\\", \\\\\\"Teatro e Dança nos Anos Iniciais\\\\\\") são DE REFERÊNCIA para professores — NUNCA DIDÁTICO. Esses livros formam o professor, não o aluno.\\nExemplos: \\\\\\"Ensinar e Aprender Histórias\\\\\\" → DE REFERÊNCIA. \\\\\\"Matemática\\\\\\" sem série/nível → DE REFERÊNCIA. \\\\\\"Língua Portuguesa — 3º Ano — Ensino Fundamental\\\\\\" → DIDÁTICO (EF 3º). \\\\\\"Estratégias de Leitura\\\\\\" → DE REFERÊNCIA. \\\\\\"Teatro e Dança nos Anos Iniciais\\\\\\" → DE REFERÊNCIA.\n\n5. palavras_chave (array com EXATAMENTE 1 string em minúsculas, NUNCA vazio): tema/gênero principal. Ex: \"aventura\", \"matemática\", \"poesia\". NUNCA vazio. REGRA ESPECIAL: se o livro for voltado para educação especial, inclusão escolar, AEE, LIBRAS, neurodiversidade, autismo, deficiência intelectual, deficiência física, transtornos de aprendizagem, altas habilidades/superdotação ou qualquer tema de educação inclusiva, a palavra_chave OBRIGATORIAMENTE deve ser \"educação especial\" ou um termo específico do tema (ex: \"libras\", \"autismo\", \"aee\", \"neurodiversidade\"). NUNCA use \"literatura\" como fallback nesses casos.\n\n6. alt_text (string, máx 100 chars): descreva a capa em 1 frase objetiva.\n\nResponda SOMENTE o JSON, começando com { e terminando com }.';
 
     var resp = await fetch('https://api.groq.com/openai/v1/chat/completions', {
         method: 'POST',
@@ -4785,6 +4915,22 @@ window.iaAnalisarComIA = async function() {
             iaMostrarStatus('🔍 LIVRO ENCONTRADO NO ACERVO!', 'info');
         } else {
             _iaModoAtivo = 'cadastro';
+            // Ocultar bloco "DADOS IDENTIFICADOS" (miniatura + info da IA) — redundante com o formulário abaixo
+            var _rLivro = document.getElementById('iaResultadoLivro');
+            if (_rLivro) _rLivro.style.display = 'none';
+            // Popular iaCadastroCapa com a foto tirada (única capa visível)
+            if (_iaFotoBase64) {
+                var _np2 = document.getElementById('iaCadastroCapaPreview');
+                var _nw2 = document.getElementById('iaCadastroCapa');
+                var _nl2 = document.getElementById('iaCadastroCapaLabel');
+                var _nr2 = document.getElementById('iaCadastroCapaBtnRemover');
+                var _nb2 = document.getElementById('iaCadastroCapaBtnEscolher');
+                if (_np2) { _np2.src = 'data:'+_iaFotoMime+';base64,'+_iaFotoBase64; _np2.style.display = 'block'; }
+                if (_nw2) { _nw2.classList.remove('sem-capa'); _nw2.classList.add('has-image','capa-carregada'); }
+                if (_nl2) _nl2.style.display = 'none';
+                if (_nr2) _nr2.style.display = '';
+                if (_nb2) _nb2.innerHTML = '📷 TROCAR CAPA';
+            }
             document.getElementById('iaCardDados').style.display = 'block';
             var _dadosElIA = document.getElementById('iaCardDados');
             if (_dadosElIA) requestAnimationFrame(function(){ window.scrollTo({ top: _dadosElIA.getBoundingClientRect().top + window.scrollY - 12, behavior: 'smooth' }); });
@@ -4933,10 +5079,14 @@ window.iaEditarManual = function() {
 
 
 // ── Cadastrar como NOVO livro com IA (mesma obra, editora/edição diferente) ──
-window.iaCadastrarComoNovoComIA = async function() {
+window.iaCadastrarComoNovoComIA = async function(btn) {
     var livro = _iaLivroEncontrado;
     if (!livro) return;
     if (!confirm('Cadastrar como NOVO livro?\n\nUso: mesma obra com editora ou edição diferente.\nSerá gerado um novo ID independente.')) return;
+
+    // Feedback imediato no botão + scroll para o topo
+    if (btn) { btn.disabled = true; btn.innerHTML = '<div class="spinner" style="display:inline-block;margin-right:0.4rem;"></div> PROCESSANDO...'; }
+    window.scrollTo({ top: 0, behavior: 'smooth' });
 
     document.getElementById('iaCardEncontrado').style.display = 'none';
     _iaModoAtivo = 'cadastro';
@@ -4974,22 +5124,39 @@ window.iaCadastrarComoNovoComIA = async function() {
     var catSel = document.getElementById('iaCampoCategoria');
     if (catSel) catSel.value = livro.categoria || '';
 
-    var capaSrc = _iaFotoBase64 ? ('data:'+_iaFotoMime+';base64,'+_iaFotoBase64) : (livro.imagem_url || null);
-    var capEl = document.getElementById('iaFotoPreview');
-    if (capaSrc && capEl) { capEl.src = capaSrc; capEl.style.display = 'block'; capEl.style.marginLeft='auto'; capEl.style.marginRight='auto'; }
-
+    // Fluxo completo de análise: Groq → metadados → mesclar (igual ao cadastro normal)
+    // Fonte da imagem: foto nova tirada, ou URL do livro existente
+    var _capaSrcParaIA = null;
     if (_iaFotoBase64) {
-        iaMostrarStatus('✨ RE-ANALISANDO COM IA...', 'info');
+        _capaSrcParaIA = 'data:'+_iaFotoMime+';base64,'+_iaFotoBase64;
+    } else if (livro.imagem_url) {
         try {
-            var dadosIA = await iaAnalisarImagemGroq(_iaFotoBase64, _iaFotoMime);
-            if (dadosIA) {
-                if (dadosIA.titulo)         _iaS('iaCampoTitulo',       dadosIA.titulo);
-                if (dadosIA.autor)          _iaS('iaCampoAutor',        dadosIA.autor);
-                if (dadosIA.isbn)           _iaS('iaCampoIsbn',         dadosIA.isbn);
-                if (dadosIA.palavras_chave) _iaS('iaCampoPalavrasChave',(dadosIA.palavras_chave||[]).join(', '));
-                if (dadosIA.alt_text)       _iaS('iaCampoAltText',      dadosIA.alt_text);
-                if (dadosIA.categoria && catSel) catSel.value = dadosIA.categoria;
+            var _srcUrl = livro.imagem_url;
+            if (!_srcUrl.startsWith('data:')) {
+                var _rr = await fetch(_srcUrl); var _blb = await _rr.blob();
+                _srcUrl = await new Promise(function(res){var fr=new FileReader();fr.onload=function(e){res(e.target.result);};fr.readAsDataURL(_blb);});
             }
+            _capaSrcParaIA = _srcUrl;
+        } catch(e) { _capaSrcParaIA = null; }
+    }
+
+    if (_capaSrcParaIA) {
+        // Mostrar imagem na zona de preview (igual ao fluxo normal)
+        var _prevNovoEl = document.getElementById('iaFotoPreview');
+        if (_prevNovoEl) { _prevNovoEl.src = _capaSrcParaIA; _prevNovoEl.style.display = 'block'; }
+        iaMostrarStatus('🤖 GROQ ANALISANDO CAPA...', 'info');
+        try {
+            var _b64novo = await _iaComprimirParaIA(_capaSrcParaIA);
+            var _imgNovo = await iaChamarGroq(_b64novo);
+            iaMostrarStatus('🔍 BUSCANDO DADOS NA INTERNET...', 'info');
+            var _webNovo = await iaBuscarMetadados(_imgNovo.isbn||null, _imgNovo.titulo, _imgNovo.autor);
+            var _dNovo   = _iaMesclar(_imgNovo, _webNovo);
+            _iaS('iaCampoTitulo',        _dNovo.titulo || '');
+            _iaS('iaCampoAutor',         _dNovo.autor  || '');
+            _iaS('iaCampoIsbn',          _dNovo.isbn   || '');
+            _iaS('iaCampoPalavrasChave', (_dNovo.palavras_chave||[]).join(', '));
+            _iaS('iaCampoAltText',       _dNovo.alt_text || '');
+            if (catSel && _dNovo.categoria) { catSel.value = _dNovo.categoria; if (!catSel.value) catSel.selectedIndex = 1; }
             iaMostrarStatus('✅ DADOS PREENCHIDOS COM IA — REVISE E CADASTRE', 'ok');
         } catch(e) {
             iaMostrarStatus('⚠️ IA indisponível — dados copiados do livro existente. Revise e cadastre.', 'info');
@@ -4999,8 +5166,8 @@ window.iaCadastrarComoNovoComIA = async function() {
     }
 
     document.getElementById('iaCardDados').style.display = 'block';
-    var _dadosEl = document.getElementById('iaCardDados');
-    if (_dadosEl) requestAnimationFrame(function(){ window.scrollTo({ top: _dadosEl.getBoundingClientRect().top + window.scrollY - 12, behavior: 'smooth' }); });
+    // Restaurar botão
+    if (btn) { btn.disabled = false; btn.innerHTML = '🆕 CADASTRAR COMO NOVO COM IA'; }
 };
 
 // ── Salvar edição ─────────────────────────────────────────────
@@ -5302,6 +5469,7 @@ window.iaNovoLivro = function() {
     var qr=document.getElementById('iaQtdRapida'); if(qr) qr.value='1';
     var bqr=document.getElementById('iaBtnSalvarQtd'); if(bqr) bqr.disabled=true;
     document.getElementById('iaResultadoLivro').classList.remove('visivel');
+    document.getElementById('iaResultadoLivro').style.display = ''; // restaura para próximo uso via iaCadastrarComoNovoComIA
     ['iaCampoTitulo','iaCampoAutor','iaCampoIsbn','iaCampoPalavrasChave','iaCampoAltText','iaCampoPdfUrl'].forEach(function(id){_iaS(id,'');});
     _iaS('iaCampoQtd','1');
     var cat=document.getElementById('iaCampoCategoria'); if(cat) cat.value='';
@@ -5858,8 +6026,8 @@ window._iaPreAquecerDB = function() {};
               if (typeof window.carregarListaPessoas === 'function') window.carregarListaPessoas();
               // Recarrega acervo se função disponível
               if (typeof window.carregarAcervoUMD === 'function') window.carregarAcervoUMD();
-              // Bug 1 fix: invalidar cache de devoluções para refletir novo empréstimo em tempo real
-              if (typeof empsComLivroCache !== 'undefined') empsComLivroCache = [];
+              // Bug 2 fix: invalidar cache de devoluções para refletir novo empréstimo imediatamente
+              window._empsComLivroCache = []; // ponte global que carregarDevolucoes já usa
               if (typeof window.carregarDevolucoes === 'function') window.carregarDevolucoes();
               window._notificarRelatorio?.();
             })
@@ -7059,6 +7227,7 @@ window._iaPreAquecerDB = function() {};
     if (data === null) return;
     try {
       await getSB().from('emprestimos').update({ status: 'devolvido', data_devolucao: data }).eq('id', id);
+      window._empsComLivroCache = []; // invalidar para sumir imediatamente da lista
       window.carregarDevolucoes();
       if (window.load) window.load();
       window._notificarRelatorio?.();
@@ -7153,8 +7322,32 @@ window._iaPreAquecerDB = function() {};
         }
         function _initFiltros() {
             const hoje = new Date();
-            if (el('filtroAno') && !el('filtroAno').value) el('filtroAno').value = hoje.getFullYear();
-            if (el('filtroMes') && !el('filtroMes').value) el('filtroMes').value = hoje.getFullYear() + '-' + String(hoje.getMonth()+1).padStart(2,'0');
+            const fAno = el('filtroAno');
+            const fMes = el('filtroMes');
+            const tRel = el('tipoRelatorio');
+            
+            // Restaurar filtros do sessionStorage
+            const sAno = sessionStorage.getItem('rel_filtro_ano');
+            const sMes = sessionStorage.getItem('rel_filtro_mes');
+            const sTipo = sessionStorage.getItem('rel_tipo');
+
+            if (tRel && sTipo) tRel.value = sTipo;
+            if (fAno) fAno.value = sAno || hoje.getFullYear();
+            if (fMes) fMes.value = sMes || (hoje.getFullYear() + '-' + String(hoje.getMonth()+1).padStart(2,'0'));
+
+            // Listener para salvar mudanças
+            [fAno, fMes, tRel].forEach(e => {
+                if (e) e.addEventListener('change', () => {
+                    sessionStorage.setItem('rel_filtro_ano', fAno?.value || '');
+                    sessionStorage.setItem('rel_filtro_mes', fMes?.value || '');
+                    sessionStorage.setItem('rel_tipo', tRel?.value || '');
+                });
+            });
+            
+            // Atualizar visibilidade dos containers conforme tipo
+            const anual = (tRel?.value || 'anual') === 'anual';
+            el('containerAno')?.classList.toggle('hidden', !anual);
+            el('containerMes')?.classList.toggle('hidden', anual);
         }
         window._initFiltrosRel = _initFiltros;
 
@@ -7404,7 +7597,7 @@ window._iaPreAquecerDB = function() {};
                     { titulo: 'EJA', corpo: tabela(['#', 'Aluno', 'Leituras'], rowsLeitores(d.alunosEJARank), 'Sem dados.') }
                 ])
                 + secaoRetrail(4, 'Funcionários que mais leram', tabela(['#', 'Funcionário', 'Leituras'], topFunc, 'Nenhum funcionário com empréstimos no período.'), [])
-                + '<div style="font-size:0.66rem;color:var(--text-light);text-align:center;padding-top:0.65rem;border-top:1px solid var(--border);">' + esc(projeto) + ' v' + esc(document.querySelector('meta[name="version"]')?.getAttribute('content') || '1.7') + '</div>'
+                + '<div style="font-size:0.66rem;color:var(--text-light);text-align:center;padding-top:0.65rem;border-top:1px solid var(--border);">' + esc(projeto) + ' v' + esc(document.querySelector('meta[name="version"]')?.getAttribute('content') || '1.8') + '</div>'
                 + '</div>';
         }
         function _gerarTxt(d) {

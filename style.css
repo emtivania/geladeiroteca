@@ -3,12 +3,12 @@
  * BIBLIOTECA MÓVEL DO(A) EMTI PROFESSORA MARIA VÂNIA FARIAS LINHARES
  *
  * @author  EMTI MARIA VANIA <https://github.com/emtivania>
- * @version 1.4
+ * @version 1.5
  * @year    2026
  * @license CC-BY 4.0
  * @source  https://github.com/emtivania/geladeiroteca
  *
- * Derivado de: BibVania v1.7 por Ruan Oliveira Lima (https://github.com/emtivania/bibvania)
+ * Derivado de: BibVania v1.8 por Ruan Oliveira Lima (https://github.com/emtivania/bibvania)
  */
 
 :root {
@@ -25,11 +25,22 @@
     --radius: 12px;
     --shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
     --font-size: 16px;
-    /* Altura do card/capa — calculada para acomodar todos os campos sem cortar:
-       padding(1rem) + título(3×0.75rem×1.35) + autor(2×0.68rem×1.3)
-       + categoria(2×0.68rem×1.3) + isbn+download(2×0.68rem×1.3)
-       + tags(1×0.64rem×1.3) + badge(1×0.64rem×1.3) ≈ 11rem */
+    /* Altura do card index (acervo público) — campos no máximo, gap:0:
+       padding(2×0.5rem=1rem) + título(3×0.75rem×1.15=2.59rem)
+       + autor(2×0.68rem×1.3=1.77rem) + ISBN(1×0.68rem×1.3=0.88rem)
+       + categoria(2×0.68rem×1.3=1.77rem) + download(1×0.68rem×1.3=0.88rem)
+       + tags(1×0.64rem×1.3=0.83rem) + badge(1×0.64rem×1.3=0.83rem) ≈ 10.55rem → 11rem */
     --cover-h: 11rem;
+    /* Altura do card admin — calculada com todos os campos no máximo:
+       padding interno (2×0.5rem=1rem) + gaps (5×0.4rem=2rem)
+       + título(4 linhas × 0.75rem × 1.15 = 3.45rem)
+       + autor(2 linhas × 0.68rem × 1.3 = 1.77rem)
+       + ISBN(1 linha × 0.68rem × 1.3 = 0.88rem)
+       + categoria+prateleira(2 linhas × 0.68rem × 1.3 = 1.77rem)
+       + download(1 linha × 0.68rem × 1.3 = 0.88rem)
+       + tags(1 linha × 0.64rem × 1.3 = 0.83rem)
+       + badge(1 linha × 0.64rem × 1.3 = 0.83rem) ≈ 13.41rem → 14rem */
+    --cover-h-admin: 14rem;
 }
 
 [data-theme="dark"] {
@@ -518,6 +529,7 @@ input:disabled {
     font-weight: 800;
     font-size: 1.1rem;
     color: var(--primary);
+    line-height: 1.2;
     display: -webkit-box;
     -webkit-line-clamp: 3;
     -webkit-box-orient: vertical;
@@ -563,7 +575,7 @@ input:disabled {
 .book-status-row.stacked {
     flex-direction: column;
     align-items: flex-start;
-    gap: 0.25rem;
+    gap: 0.05rem;
 }
 
 .book-status-badge-row {
@@ -814,6 +826,14 @@ header h1 { font-size: 1.75rem; }
 /* Feedback de pressionar (scale down) para botões pequenos — melhora UX em touch. */
 .btn-small:active {
     opacity: 0.75;
+}
+/* Estado desabilitado — cinza e não-clicável */
+.btn-small:disabled,
+.btn-small[disabled] {
+    background: #94a3b8 !important;
+    color: #fff !important;
+    cursor: not-allowed !important;
+    opacity: 0.7;
 }
 
 /* Esconde img de capa antes de ter src válido — especificidade alta para vencer qualquer display:block */
@@ -1140,6 +1160,7 @@ input[type="search"] { appearance: none; -webkit-appearance: none; }
     flex-direction: row;
     align-items: stretch;
     height: var(--cover-h);
+    min-height: var(--cover-h);
     max-height: var(--cover-h);
 }
 
@@ -1209,7 +1230,7 @@ input[type="search"] { appearance: none; -webkit-appearance: none; }
     font-size: 0.75rem;
     font-weight: 700;
     color: var(--primary);
-    line-height: 1.35;
+    line-height: 1.15;
     word-break: break-word;
     overflow-wrap: break-word;
     display: -webkit-box !important;
@@ -1280,49 +1301,64 @@ input[type="search"] { appearance: none; -webkit-appearance: none; }
 /* Altura dos botões de ação — usada para estabilizar as setas */
 :root { --actions-h: 2.1rem; }
 
-/* book-item: coluna com altura total fixa */
+/* book-item: altura mínima padrão — cresce se o conteúdo precisar */
 #tab-registro .book-item,
 #secaoAtrasadosAdmin .book-item {
     flex-direction: column !important;
     padding: 0 !important;
-    overflow: hidden !important;
+    overflow: visible !important;
     align-items: stretch !important;
-    height: calc(var(--cover-h) + var(--actions-h)) !important;
-    max-height: calc(var(--cover-h) + var(--actions-h)) !important;
+    min-height: calc(var(--cover-h-admin) + var(--actions-h)) !important;
+    height: calc(var(--cover-h-admin) + var(--actions-h)) !important;
+    max-height: calc(var(--cover-h-admin) + var(--actions-h)) !important;
 }
 
-/* book-header: altura fixa = cover-h, overflow oculto */
+/* book-header: min-height = cover-h, cresce se precisar, flex para capa esticar */
 #tab-registro .book-header,
 #secaoAtrasadosAdmin .book-header {
     width: 100% !important;
     cursor: default !important;
+    display: flex !important;
+    flex-direction: row !important;
     align-items: stretch !important;
     overflow: hidden !important;
     padding: 0 !important;
     gap: 0 !important;
-    height: var(--cover-h) !important;
-    max-height: var(--cover-h) !important;
-    min-height: unset !important;
+    min-height: var(--cover-h-admin) !important;
+    height: var(--cover-h-admin) !important;
+    max-height: var(--cover-h-admin) !important;
     /* Separador visual entre card e botões */
     border-bottom: 1px solid var(--border) !important;
 }
 
-/* Miniatura: mesmas dimensões do index, canto inferior esquerdo reto */
+/* Miniatura: largura proporcional, altura mínima = cover-h, estica com o card */
 #tab-registro .book-cover-wrap,
 #secaoAtrasadosAdmin .book-cover-wrap {
-    width: calc(var(--cover-h) * 4 / 5) !important;
-    min-width: calc(var(--cover-h) * 4 / 5) !important;
-    max-width: calc(var(--cover-h) * 4 / 5) !important;
-    height: 100% !important;
-    min-height: unset !important;
-    max-height: unset !important;
+    width: calc(var(--cover-h-admin) * 4 / 5) !important;
+    min-width: calc(var(--cover-h-admin) * 4 / 5) !important;
+    max-width: calc(var(--cover-h-admin) * 4 / 5) !important;
+    /* height fixa = cover-h-admin para padronizar todos os cards */
+    height: var(--cover-h-admin) !important;
+    min-height: var(--cover-h-admin) !important;
+    max-height: var(--cover-h-admin) !important;
     align-self: stretch !important;
     flex-shrink: 0 !important;
     flex-grow: 0 !important;
     position: relative !important;
-    display: block !important;
+    display: flex !important;
+    flex-direction: column !important;
     overflow: hidden !important;
     border-radius: var(--radius) 0 0 0 !important;
+}
+
+/* Spacer invisível que força a altura — a imagem absoluta fica em cima */
+#tab-registro .book-cover-wrap::before,
+#secaoAtrasadosAdmin .book-cover-wrap::before {
+    content: '';
+    display: block;
+    width: 100%;
+    flex: 1 1 auto;
+    min-height: var(--cover-h-admin);
 }
 
 #tab-registro .book-cover-wrap img.cover-img,
@@ -1349,8 +1385,9 @@ input[type="search"] { appearance: none; -webkit-appearance: none; }
 /* book-header-inner: space-between para empurrar tags/badge pro pé */
 #tab-registro .book-header-inner,
 #secaoAtrasadosAdmin .book-header-inner {
-    height: 100%;
-    min-height: unset;
+    height: var(--cover-h-admin);
+    min-height: var(--cover-h-admin);
+    max-height: var(--cover-h-admin);
     gap: 0.4rem;
     justify-content: space-between;
     padding: 0.5rem 0.75rem;
@@ -1372,13 +1409,14 @@ input[type="search"] { appearance: none; -webkit-appearance: none; }
     font-size: 0.75rem;
     font-weight: 700;
     color: var(--primary);
-    line-height: 1.35;
+    line-height: 1.15;
     word-break: break-word;
     overflow-wrap: break-word;
     display: -webkit-box !important;
-    -webkit-line-clamp: 3;
+    -webkit-line-clamp: 4;
     -webkit-box-orient: vertical;
     overflow: hidden;
+    text-overflow: ellipsis;
     padding-right: 0;
 }
 
@@ -1489,7 +1527,7 @@ input[type="search"] { appearance: none; -webkit-appearance: none; }
 
 /* Garante espaço mínimo para setas não sumirem com poucos cards */
 #listaAdmin {
-    min-height: calc(var(--cover-h) + var(--actions-h));
+    min-height: calc(var(--cover-h-admin) + var(--actions-h));
 }
 
 
@@ -1709,4 +1747,21 @@ body.bibmaker-page .checkbox-container.checked {
 
 [data-theme="dark"] body.bibmaker-page .checkbox-container.checked {
     background: #052e16;
+}
+
+/* ── VLibras Fix: Esconde texto alt bugado quando a imagem do CDN falha ao carregar ── */
+[vw-access-button] img {
+    text-indent: -9999px !important;
+    color: transparent !important;
+    overflow: hidden !important;
+    font-size: 0 !important;
+    display: block !important;
+}
+/* Garante que o widget não vaze para fora da viewport em computadores com zoom ou resolução diferente */
+[vw] {
+    max-width: 100vw !important;
+    overflow: hidden !important;
+}
+[vw-access-button] {
+    overflow: hidden !important;
 }

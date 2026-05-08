@@ -22,7 +22,7 @@
  * com chamadas síncronas de outros scripts inline.
  *
  * @author  emtivania <https://github.com/ruanolima>
- * @version 1.7
+ * @version 1.8
  * @year    2026
  * @license CC-BY-4.0 <https://creativecommons.org/licenses/by/4.0/>
  * @source  https://github.com/emtivania/bibvania
@@ -377,6 +377,25 @@ const DB = {
     CATEGORIAS: CATEGORIAS_FIXAS,
     supabase: supabase,
 
+    /**
+     * _fetchAll(query): Função utilitária interna para buscar TODOS os registros de uma tabela,
+     * contornando o limite padrão de 1000 registros do Supabase através de paginação automática.
+     */
+    async _fetchAll(query) {
+        let allData = [];
+        let from = 0;
+        let step = 1000;
+        while (true) {
+            const { data, error } = await query.range(from, from + step - 1);
+            if (error) throw error;
+            if (!data || data.length === 0) break;
+            allData = allData.concat(data);
+            if (data.length < step) break;
+            from += step;
+        }
+        return allData;
+    },
+
     // ── Autenticação ──────────────────────────────────────────────────────────
     async signIn(email, password) {
         const { data, error } = await supabase.auth.signInWithPassword({ email, password });
@@ -434,14 +453,12 @@ const DB = {
     // ── Livros ────────────────────────────────────────────────────────────────
     async getLivros() {
         try {
-            const { data, error } = await supabase
+            const query = supabase
                 .from("livros")
                 .select("id, titulo, autor, isbn, categoria, prateleira, quantidade_total, quantidade_disponivel, palavras_chave, alt_text, imagem_url, pdf_url, data_cadastro, data_edicao")
                 .order("data_edicao", { ascending: false, nullsFirst: false })
                 .order("data_cadastro", { ascending: false });
-            if (error) throw error;
-            if (!data) { console.error("Nenhum dado retornado do Supabase"); return []; }
-            return data;
+            return await this._fetchAll(query);
         } catch (error) {
             console.error("Erro ao listar livros:", error.message);
             throw error;
@@ -651,15 +668,16 @@ const DB = {
             if (emprestimo.turma_aluno)              updateData.turma_aluno  = String(emprestimo.turma_aluno).toUpperCase();
             if (emprestimo.dias_emprestimo !== undefined) updateData.dias_emprestimo = parseInt(emprestimo.dias_emprestimo);
             if (emprestimo.sem_data_definida !== undefined) updateData.sem_data_definida = emprestimo.sem_data_definida;
+            if (emprestimo.data_emprestimo)         updateData.data_emprestimo = emprestimo.data_emprestimo;
 
             if (emprestimo.sem_data_definida) {
                 updateData.data_prevista_devolucao = null;
             } else if (emprestimo.data_prevista_devolucao) {
                 updateData.data_prevista_devolucao = emprestimo.data_prevista_devolucao;
             } else if (emprestimo.dias_emprestimo) {
-                const dataCalc = new Date();
-                dataCalc.setDate(dataCalc.getDate() + parseInt(emprestimo.dias_emprestimo));
-                updateData.data_prevista_devolucao = dataCalc.toISOString();
+                const baseCalc = emprestimo.data_emprestimo ? new Date(emprestimo.data_emprestimo) : new Date();
+                baseCalc.setDate(baseCalc.getDate() + parseInt(emprestimo.dias_emprestimo));
+                updateData.data_prevista_devolucao = baseCalc.toISOString();
             }
 
             const { data, error } = await supabase
@@ -702,10 +720,8 @@ const DB = {
 
     async getEmprestimos() {
         try {
-            const { data, error } = await supabase
-                .from("emprestimos").select("*").order("data_emprestimo", { ascending: false });
-            if (error) throw error;
-            return data || [];
+            const query = supabase.from("emprestimos").select("*").order("data_emprestimo", { ascending: false });
+            return await this._fetchAll(query);
         } catch (error) {
             console.error("Erro ao listar empréstimos:", error);
             throw error;
@@ -757,8 +773,7 @@ const DB = {
                 .from("emprestimos").select("*").eq("status", "emprestado")
                 .order("data_emprestimo", { ascending: false });
             if (livroId) query = query.eq("livro_id", livroId);
-            const { data, error } = await query;
-            if (error) throw error;
+            const data = await this._fetchAll(query);
             const hojeZero = new Date(); hojeZero.setHours(0, 0, 0, 0);
             return (data || []).map(e => {
                 if (e.data_prevista_devolucao) {
@@ -795,9 +810,13 @@ const DB = {
 
     // ── Pessoas ───────────────────────────────────────────────────────────────
     async getPessoas() {
-        const { data, error } = await supabase.from('pessoas').select('*').order('nome', { ascending: true });
-        if (error) throw error;
-        return data || [];
+        try {
+            const query = supabase.from('pessoas').select('*').order('nome', { ascending: true });
+            return await this._fetchAll(query);
+        } catch (error) {
+            console.error("Erro ao listar pessoas:", error);
+            throw error;
+        }
     },
 
     async salvarPessoa(pessoa) {

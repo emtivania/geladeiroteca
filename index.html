@@ -62,11 +62,11 @@
     <meta name="author" content="EMTI MARIA VANIA">
     <meta name="license" content="CC-BY 4.0">
     <meta name="source" content="https://github.com/emtivania/geladeiroteca">
-    <meta name="version" content="1.4">
+    <meta name="version" content="1.5">
     <meta name="year" content="2026">
     <meta name="tipobib" content="escolar">
     <meta name="tipolabel" content="BIBLIOTECA MÓVEL">
-    <meta name="versaobase" content="1.7">
+    <meta name="versaobase" content="1.8">
     <link rel="icon" type="image/png" href="favicon.png">
     <!-- Preconnect: reduz latência de conexão com serviços externos -->
     <link rel="preconnect" href="https://zkscdfqsqhxldxlmklum.supabase.co" crossorigin>
@@ -243,9 +243,12 @@
                 lbl.setAttribute('aria-hidden', 'true');
                 wrap.insertBefore(lbl, wrap.firstChild);
             }
-            lbl.innerHTML = 'SEM<br>CAPA';
+            lbl.innerHTML = '<img src="logo.png" style="width:40px;height:auto;margin-bottom:8px;opacity:0.4;filter:grayscale(1);" alt=""><br>SEM<br>CAPA';
             lbl.style.fontSize = '9px';
-            lbl.style.display = '';
+            lbl.style.display = 'flex';
+            lbl.style.flexDirection = 'column';
+            lbl.style.alignItems = 'center';
+            lbl.style.justifyContent = 'center';
         }
 
         /**
@@ -520,44 +523,56 @@
         function _injetarCapas(lote, renderToken) {
             lote.forEach(l => {
                 const wrap = document.querySelector(`[data-livro-id="${l.id}"]`);
+                const card = wrap?.closest('.book-item');
+                if (card) card.style.opacity = '0'; // Esconde o card até estar pronto
+
                 if (!l.imagem_url || l._capaResolvida === 'sem') {
                     l._capaResolvida = 'sem';
                     if (wrap && !wrap.classList.contains('capa-carregada')) {
                         wrap.classList.add('sem-capa', 'capa-carregada');
                         _setLabelSemCapa(wrap);
                     }
+                    if (card) card.style.opacity = '1';
                     return;
                 }
-                if (l._capaResolvida === 'tem' && wrap && wrap.classList.contains('capa-carregada')) return;
+                if (l._capaResolvida === 'tem' && wrap && wrap.classList.contains('capa-carregada')) {
+                    if (card) card.style.opacity = '1';
+                    return;
+                }
                 if (!wrap) return;
                 const img = wrap.querySelector('img.cover-img');
                 if (!img) return;
-                const url = l.imagem_url;
-                img.style.opacity = '0';
-                img.onload = () => {
-                    if (img.naturalWidth > 0 && img.naturalWidth === img.naturalHeight && img.naturalWidth <= 300) {
+
+                const tempImg = new Image();
+                tempImg.fetchPriority = 'high';
+                tempImg.onload = () => {
+                    if (renderToken !== _renderToken) return;
+                    if (tempImg.naturalWidth > 0 && tempImg.naturalWidth === tempImg.naturalHeight && tempImg.naturalWidth <= 300) {
                         l._capaResolvida = 'sem'; l.imagem_url = null;
                         if (_idsComCapaCache) _idsComCapaCache.delete(l.id);
-                        img.style.opacity = '0';
                         wrap.classList.add('sem-capa', 'capa-carregada');
                         _setLabelSemCapa(wrap);
+                        if (card) card.style.opacity = '1';
                         return;
                     }
                     l._capaResolvida = 'tem';
+                    img.src = tempImg.src;
                     wrap.classList.remove('sem-capa');
                     wrap.classList.add('has-image', 'capa-carregada');
                     const lbl = wrap.querySelector('.book-cover-label');
                     if (lbl) lbl.style.display = 'none';
-                    img.style.transition = 'opacity 0.25s ease';
                     img.style.opacity = '1';
+                    if (card) card.style.opacity = '1';
                 };
-                img.onerror = () => {
+                tempImg.onerror = () => {
+                    if (renderToken !== _renderToken) return;
                     l._capaResolvida = 'sem'; l.imagem_url = null;
                     if (_idsComCapaCache) _idsComCapaCache.delete(l.id);
                     wrap.classList.add('sem-capa', 'capa-carregada');
                     _setLabelSemCapa(wrap);
+                    if (card) card.style.opacity = '1';
                 };
-                img.src = url;
+                tempImg.src = l.imagem_url;
             });
         }
 
@@ -723,18 +738,19 @@
         });
 
     </script>
-    <!--
-    Widget VLibras (vlibras.gov.br) — fornece interpretação em Língua Brasileira
-    de Sinais (Libras) para toda a página. Exigido por boas práticas de
-    acessibilidade para o público escolar brasileiro.
-    -->
+    <script src="bibvania.js"></script>
+
     <!-- VLibras — Libras accessibility widget -->
-    <div vw class="enabled" aria-label="Widget de acessibilidade em Libras" role="complementary">
-        <div vw-access-button class="active" aria-label="Abrir interpretação em Libras"></div>
-        <div vw-plugin-wrapper><div class="vw-plugin-top-wrapper"></div></div>
+    <div vw class="enabled">
+        <div vw-access-button class="active"></div>
+        <div vw-plugin-wrapper>
+            <div class="vw-plugin-top-wrapper"></div>
+        </div>
     </div>
     <script src="https://vlibras.gov.br/app/vlibras-plugin.js"></script>
-    <script>new window.VLibras.Widget('https://vlibras.gov.br/app');</script>
+    <script>
+        new window.VLibras.Widget('https://vlibras.gov.br/app');
+    </script>
 
     <!--
     LIGHTBOX DE CAPA
@@ -753,7 +769,7 @@
         <button class="lightbox-back" onclick="fecharLightbox()">← VOLTAR</button>
     </div>
     <footer style="text-align:center;padding:1.5rem 1rem;font-size:0.7rem;color:var(--text-light);border-top:1px solid var(--border);margin-top:2rem;" aria-label="Rodapé">
-        <p>GELADEIROTECA ONLINE v1.4 &copy; 2026 <a href="https://github.com/emtivania" rel="author noopener" style="color:inherit;">EMTI MARIA VANIA</a> &mdash; <a href="https://creativecommons.org/licenses/by/4.0/deed.pt-br" rel="license noopener" style="color:inherit;">CC-BY 4.0</a> &mdash; <a href="https://github.com/emtivania/geladeiroteca" rel="noopener" style="color:inherit;">GitHub</a> &nbsp;|&nbsp; criado com <a href="bibmaker.html" target="_blank" rel="noopener" style="color:inherit;">BibMaker v1.4</a> &mdash; Construtor de Biblioteca Online da BibVania &nbsp;|&nbsp; BibVania v1.7 &copy; 2026 <a href="https://github.com/ruanolima" rel="author noopener" style="color:inherit;">Ruan Oliveira Lima</a> &mdash; <a href="https://creativecommons.org/licenses/by/4.0/" rel="license noopener" style="color:inherit;">CC-BY-4.0</a> &mdash; <a href="https://github.com/emtivania/bibvania" rel="noopener" style="color:inherit;">GitHub</a></p>
+        <p>GELADEIROTECA ONLINE v1.5 &copy; 2026 <a href="https://github.com/emtivania" rel="author noopener" style="color:inherit;">EMTI MARIA VANIA</a> &mdash; <a href="https://creativecommons.org/licenses/by/4.0/deed.pt-br" rel="license noopener" style="color:inherit;">CC-BY 4.0</a> &mdash; <a href="https://github.com/emtivania/geladeiroteca" rel="noopener" style="color:inherit;">GitHub</a> &nbsp;|&nbsp; criado com <a href="bibmaker.html" target="_blank" rel="noopener" style="color:inherit;">BibMaker v1.5</a> &mdash; Construtor de Biblioteca Online da BibVania &nbsp;|&nbsp; BibVania v1.8 &copy; 2026 <a href="https://github.com/ruanolima" rel="author noopener" style="color:inherit;">Ruan Oliveira Lima</a> &mdash; <a href="https://creativecommons.org/licenses/by/4.0/" rel="license noopener" style="color:inherit;">CC-BY-4.0</a> &mdash; <a href="https://github.com/emtivania/bibvania" rel="noopener" style="color:inherit;">GitHub</a></p>
     </footer>
     <script>
         function fecharLightbox() {
@@ -782,8 +798,6 @@
             setTimeout(() => { const btn = lb.querySelector('.lightbox-back'); if (btn) btn.focus(); }, 50);
         }, true);
     </script>
-    <script src="bibvania.js"></script>
-
 
 
 </body>
