@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   ===========================================================================
-  BibVania — index.html  |  Catálogo Público do Acervo
+  Geladeiroteca Online — index.html  |  Catálogo Público do Acervo
   ===========================================================================
   PROPÓSITO
     Página pública, sem autenticação. Permite que qualquer visitante
@@ -9,19 +9,20 @@
     capas em lightbox e acesse tags de palavras-chave.
 
   ARQUITETURA GERAL
-    • Carrega bibvania.js como ES Module (import DB) E como script UMD
+    • Carrega bibcore.js como ES Module (import DB) E como script UMD
       no final do body (retrocompatibilidade com chamadas síncronas).
     • Todo o estado da lista (todosLivros, filtros, paginação) fica em
       variáveis locais dentro do bloco <script type="module">.
-    • Comunicação em tempo real via Supabase Realtime (onLivrosChange +
-      onEmprestimosChange) + intervalo de 60 s como fallback.
+    • Comunicação em tempo real via Supabase Realtime (onLivrosChange,
+      que já reflete mudanças de emprestimos indiretamente via o campo
+      livros.quantidade_disponivel) + intervalo de 60 s como fallback.
 
   FLUXO DE INICIALIZAÇÃO
     1. Script inline (head) aplica tema e font-size ANTES do CSS externo
        carregar → elimina flash claro→escuro.
     2. inicializar() → aplica preferências → carregarLivros().
-    3. carregarLivros(): busca getLivros() + getEmprestimosAtivos() em
-       paralelo; resolve capas diretamente de imagem_url; renderiza.
+    3. carregarLivros(): busca getLivros(); resolve capas diretamente de
+       imagem_url; renderiza.
     4. Realtime/setInterval disparam _buscarEAtualizar(false) que preserva
        capas já resolvidas em memória.
 
@@ -33,7 +34,6 @@
     • Carrossel paginado (1 livro/página) com swipe touch
     • Lightbox ao clicar em capa com imagem
     • Modo escuro (localStorage)
-    • VLibras (acessibilidade em Libras)
     • Skip link WCAG 2.4.1
 
   ACESSIBILIDADE
@@ -43,48 +43,145 @@
     • Botões touch com touchstart listener (elimina delay 300ms)
 
   DEPENDÊNCIAS EXTERNAS
-    • bibvania.js (mesmo diretório)
+    • bibcore.js (mesmo diretório)
     • style.css (mesmo diretório)
-    • vlibras.gov.br/app/vlibras-plugin.js (CDN externo)
   ===========================================================================
 -->
 <html lang="pt-BR">
 <head>
+
 <script>function navegarCom(url){window.location.href=url;}</script>
 <script>
     // Aplicar tema antes do CSS carregar — elimina flash claro→escuro
     (function(){var t=localStorage.getItem('theme');if(t)document.documentElement.setAttribute('data-theme',t);})();
-    // Aplicar font-size salvo imediatamente
+    // Carrega VERSION.json de forma síncrona — garante BIBVANIA_VERSAO disponível imediatamente.
+    (function(){
+        try {
+            var xhr = new XMLHttpRequest();
+            xhr.open('GET', 'VERSION.json', false);
+            xhr.send();
+            if (xhr.status === 200) {
+                var data = JSON.parse(xhr.responseText);
+                if (data && data.bibvania) {
+                    window.BIBVANIA_VERSAO = data.bibvania;
+                    document.querySelectorAll('meta[name="version"], meta[name="versaobase"]').forEach(function(m){
+                        m.setAttribute('content', data.bibvania);
+                    });
+                    try {
+                        document.dispatchEvent(new CustomEvent('bibvania:versao', { detail: { versao: data.bibvania } }));
+                    } catch(_) {}
+                }
+            }
+        } catch(_) {}
+    })();
 </script>
     <meta charset="UTF-8">
+    <script src="bibconfig.js"></script>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>GELADEIROTECA ONLINE — BIBLIOTECA MÓVEL DO(A) EMTI PROFESSORA MARIA VÂNIA FARIAS LINHARES</title>
-    <meta name="author" content="EMTI MARIA VANIA">
-    <meta name="license" content="CC-BY 4.0">
+    <title>Geladeiroteca Online — Biblioteca Móvel da EMTI</title>
+    <meta name="description" content="Pesquise livros, consulte a disponibilidade e explore o acervo da Geladeiroteca Online, biblioteca móvel da EMTI Professora Maria Vânia Farias Linhares.">
+    <meta name="author" content="EMTI Maria Vânia">
+    <meta name="creator" content="EMTI Maria Vânia">
+    <meta name="publisher" content="EMTI Maria Vânia">
+    <meta name="copyright" content="© 2026 EMTI Maria Vânia">
+    <meta name="generator" content="BibMaker">
+    <meta name="application-name" content="Geladeiroteca Online">
+    <meta name="language" content="pt-BR">
+    <meta name="coverage" content="Brasil">
+    <meta name="rating" content="general">
+    <meta name="audience" content="general">
+    <meta name="format-detection" content="telephone=no, address=no, email=no">
+    <meta name="color-scheme" content="light dark">
+    <meta name="license-name" content="CC-BY-SA-4.0">
+    <meta name="license-version" content="4.0">
+    <meta name="license-url" content="https://creativecommons.org/licenses/by-sa/4.0/deed.pt-br">
     <meta name="source" content="https://github.com/emtivania/geladeiroteca">
-    <meta name="version" content="1.5">
+    <meta name="version" content="1.6">
     <meta name="year" content="2026">
     <meta name="tipobib" content="escolar">
-    <meta name="tipolabel" content="BIBLIOTECA MÓVEL">
-    <meta name="versaobase" content="1.8">
-    <link rel="icon" type="image/png" href="favicon.png">
-    <!-- Preconnect: reduz latência de conexão com serviços externos -->
-    <link rel="preconnect" href="https://zkscdfqsqhxldxlmklum.supabase.co" crossorigin>
-    <link rel="dns-prefetch" href="https://zkscdfqsqhxldxlmklum.supabase.co">
-    <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
-    <link rel="preconnect" href="https://vlibras.gov.br" crossorigin>
-    <link rel="dns-prefetch" href="https://cdn.jsdelivr.net">
-    <link rel="dns-prefetch" href="https://vlibras.gov.br">
-    <meta name="description" content="Pesquise e explore o acervo digital da BIBLIOTECA MÓVEL DO(A) EMTI PROFESSORA MARIA VÂNIA FARIAS LINHARES. Sistema GELADEIROTECA ONLINE.">
+    <meta name="tipolabel" content="Biblioteca Móvel">
+    <meta name="versaobase" content="2.0">
+    <meta name="nomeprojeto" content="Geladeiroteca Online">
+    <meta name="nomeesc1" content="BIBLIOTECA MÓVEL DA EMTI">
+    <meta name="nomeesc2" content="PROFESSORA MARIA VÂNIA FARIAS LINHARES">
     <meta name="robots" content="index, follow">
+    <meta name="googlebot" content="index, follow, max-image-preview:large, max-snippet:-1">
+    <meta name="bingbot" content="index, follow">
+    <meta name="referrer" content="strict-origin-when-cross-origin">
+    <meta name="google" content="notranslate">
+    <meta http-equiv="Content-Security-Policy" content="default-src &#x27;self&#x27;; base-uri &#x27;self&#x27;; object-src &#x27;none&#x27;; form-action &#x27;self&#x27;; script-src &#x27;self&#x27; &#x27;unsafe-inline&#x27; https://cdn.jsdelivr.net; style-src &#x27;self&#x27; &#x27;unsafe-inline&#x27; https://cdn.jsdelivr.net; img-src &#x27;self&#x27; data: blob: https:; font-src &#x27;self&#x27; data: https://cdn.jsdelivr.net; connect-src &#x27;self&#x27; https://*.supabase.co https://api.imgbb.com https://api.mistral.ai https://limaoruan.github.io https://raw.githubusercontent.com; manifest-src &#x27;self&#x27;;">
+    <style id="bv-antiframe">html{display:none!important}</style>
+    <script>(function(){if(window.top===window.self){var s=document.getElementById('bv-antiframe');if(s)s.remove();}else{try{window.top.location=window.self.location.href;}catch(e){}}})();</script>
     <meta name="theme-color" content="#2563eb">
-    <!-- Open Graph -->
+    <link rel="canonical" href="https://emtivania.github.io/geladeiroteca/">
+    <link rel="icon" href="favicon.ico" sizes="any">
+    <link rel="icon" type="image/png" sizes="16x16" href="favicon-16.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png">
+    <link rel="icon" type="image/png" sizes="48x48" href="favicon-48.png">
+    <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+    <link rel="icon" type="image/png" sizes="512x512" href="icon-512.png">
+    <link rel="icon" type="image/png" href="favicon.png">
+    <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
+    <link rel="manifest" href="manifest.webmanifest">
+    <link rel="license" href="https://creativecommons.org/licenses/by-sa/4.0/deed.pt-br">
+    <link rel="author" href="https://www.instagram.com/escmariavania/">
+    <link rel="me" href="https://www.instagram.com/escmariavania/">
+    <link rel="preload" href="logo.png" as="image">
+    <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+    <link rel="dns-prefetch" href="https://cdn.jsdelivr.net">
+    <link rel="preconnect" href="https://zkscdfqsqhxldxlmklum.supabase.co" crossorigin>
     <meta property="og:type" content="website">
-    <meta property="og:title" content="GELADEIROTECA ONLINE — BIBLIOTECA MÓVEL DO(A) EMTI PROFESSORA MARIA VÂNIA FARIAS LINHARES">
-    <meta property="og:description" content="Pesquise e explore o acervo digital da BIBLIOTECA MÓVEL DO(A) EMTI PROFESSORA MARIA VÂNIA FARIAS LINHARES.">
-    <meta property="og:image" content="https://emtivania.github.io/geladeiroteca/og-image.png">
+    <meta property="og:site_name" content="Geladeiroteca Online">
+    <meta property="og:title" content="Geladeiroteca Online — Biblioteca Móvel da EMTI">
+    <meta property="og:description" content="Pesquise livros, consulte a disponibilidade e explore o acervo da Geladeiroteca Online, biblioteca móvel da EMTI Professora Maria Vânia Farias Linhares.">
     <meta property="og:url" content="https://emtivania.github.io/geladeiroteca/">
     <meta property="og:locale" content="pt_BR">
+    <meta property="og:image" content="https://emtivania.github.io/geladeiroteca/og-image.png">
+    <meta property="og:image:secure_url" content="https://emtivania.github.io/geladeiroteca/og-image.png">
+    <meta property="og:image:type" content="image/png">
+    <meta property="og:image:width" content="1200">
+    <meta property="og:image:height" content="630">
+    <meta property="og:image:alt" content="Imagem da biblioteca móvel online da EMTI Professora Maria Vânia Farias Linhares.">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="Geladeiroteca Online — Biblioteca Móvel da EMTI">
+    <meta name="twitter:description" content="Pesquise livros, consulte a disponibilidade e explore o acervo da Geladeiroteca Online, biblioteca móvel da EMTI Professora Maria Vânia Farias Linhares.">
+    <meta name="twitter:url" content="https://emtivania.github.io/geladeiroteca/">
+    <meta name="twitter:image" content="https://emtivania.github.io/geladeiroteca/og-image.png">
+    <meta name="twitter:image:alt" content="Imagem da biblioteca móvel online da EMTI Professora Maria Vânia Farias Linhares.">
+    <script type="application/ld+json">
+    {
+  "@context": "https://schema.org",
+  "@type": "Library",
+  "@id": "https://emtivania.github.io/geladeiroteca/#library",
+  "name": "Geladeiroteca Online",
+  "url": "https://emtivania.github.io/geladeiroteca/",
+  "description": "Pesquise livros, consulte a disponibilidade e explore o acervo da Geladeiroteca Online, biblioteca móvel da EMTI Professora Maria Vânia Farias Linhares.",
+  "image": "https://emtivania.github.io/geladeiroteca/og-image.png",
+  "logo": "https://emtivania.github.io/geladeiroteca/logo.png",
+  "inLanguage": "pt-BR",
+  "isAccessibleForFree": true,
+  "license": "https://creativecommons.org/licenses/by-sa/4.0/deed.pt-br",
+  "sameAs": [
+    "https://github.com/emtivania/geladeiroteca"
+  ],
+  "mainEntityOfPage": "https://emtivania.github.io/geladeiroteca/",
+  "creator": {
+    "@type": "Organization",
+    "name": "EMTI Maria Vânia",
+    "url": "https://www.instagram.com/escmariavania/"
+  },
+  "author": {
+    "@type": "Organization",
+    "name": "EMTI Maria Vânia",
+    "url": "https://www.instagram.com/escmariavania/"
+  },
+  "publisher": {
+    "@type": "Organization",
+    "name": "EMTI Maria Vânia",
+    "url": "https://www.instagram.com/escmariavania/"
+  }
+}
+    </script>
 <style>
     /*
      * CSS CRÍTICO (inline) — aplicado ANTES de style.css ser baixado.
@@ -96,10 +193,10 @@
     *{box-sizing:border-box;margin:0;padding:0}
     body{background-color:var(--bg);color:var(--text);font-family:'Inter',system-ui,-apple-system,sans-serif;font-size:1rem;text-transform:uppercase}
     .btn-block{width:100%;padding:1rem;border:none;border-radius:8px;font-weight:700;font-size:0.9rem;cursor:pointer}
-    .btn-primary{background:var(--primary);color:#fff}
+    .btn-primary{background:rgba(37,99,235,0.75);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);color:#fff}
     .btn-danger{background:#ef4444;color:#fff}
     .btn-outline{background:var(--card);border:1px solid var(--border);color:var(--text)}
-    .accessibility-bar{position:fixed;top:0;left:0;right:0;z-index:1000;background:var(--primary);display:flex;padding:0.4rem;gap:0.5rem;height:48px}
+    .accessibility-bar{position:fixed;top:0.6rem;left:50%;transform:translateX(-50%);width:auto;max-width:calc(100% - 2rem);height:44px;display:flex;justify-content:center;align-items:center;padding:0 1rem;z-index:1000;gap:0.5rem;border-radius:999px;box-shadow:0 4px 16px rgba(0,0,0,0.18);background:rgba(37,99,235,0.75)}
     .control-btn{background:rgba(255,255,255,.2);border:none;color:#fff;width:36px;height:36px;border-radius:8px;cursor:pointer;font-weight:700;font-size:0.9rem;touch-action:manipulation;-webkit-tap-highlight-color:transparent;user-select:none;}
 </style>
     <link rel="stylesheet" href="style.css">
@@ -108,30 +205,57 @@
     <!-- Skip navigation — WCAG 2.4.1 -->
     <a href="#conteudo-principal" class="skip-link">Ir para o conteúdo principal</a>
 
-    <div class="accessibility-bar" role="toolbar" aria-label="GELADEIROTECA ONLINE">
-        <button class="control-btn" onclick="window.open('https://github.com/emtivania/geladeiroteca', '_blank')" style="width:auto;padding:0 0.75rem;text-align:left;" aria-label="Abrir repositório no GitHub">📁 Repositório</button>
-        <button class="control-btn" onclick="window.open('bibmaker.html?aba=cadastro','_blank')" style="width:auto;padding:0 0.75rem;text-align:left;margin-right:auto;" aria-label="Criar sua própria biblioteca">📚 Crie sua Bib!</button>
-        <button class="control-btn" id="darkModeBtn" aria-label="Alternar modo escuro" aria-pressed="false">🌙</button>
+    <div class="accessibility-bar" role="toolbar" aria-label="Barra de acessibilidade">
+        <div class="menu-atalhos" id="menuAtalhos">
+            <button class="menu-atalhos-btn" onclick="toggleMenuAtalhos()" aria-haspopup="true" aria-expanded="false" aria-label="Menu de atalhos">
+                <img id="menuAtalhosFavicon" src="favicon.png" alt="" aria-hidden="true" style="width:20px;height:20px;border-radius:4px;object-fit:contain;flex-shrink:0;"> <span class="menu-atalhos-chevron" aria-hidden="true">▼</span>
+            </button>
+            <div class="menu-atalhos-lista" role="menu">
+                <button class="menu-atalhos-item" role="menuitem" onclick="window.open('https://github.com/emtivania/geladeiroteca','_blank','noopener,noreferrer');fecharMenuAtalhos()">
+                    <span class="menu-atalhos-item-emoji">📁</span> Repositório
+                </button>
+                <button class="menu-atalhos-item" role="menuitem" onclick="irParaAdmin();fecharMenuAtalhos()">
+                    <span class="menu-atalhos-item-emoji">🔑</span> Área do Bibliotecário
+                </button>
+            </div>
+        </div>
+        <script>
+            window.toggleMenuAtalhos = function() {
+                var menu = document.getElementById('menuAtalhos');
+                if (!menu) return;
+                var aberto = menu.classList.toggle('aberto');
+                var botao = menu.querySelector('.menu-atalhos-btn');
+                if (botao) botao.setAttribute('aria-expanded', aberto ? 'true' : 'false');
+            };
+            window.fecharMenuAtalhos = function() {
+                var menu = document.getElementById('menuAtalhos');
+                if (!menu) return;
+                menu.classList.remove('aberto');
+                var botao = menu.querySelector('.menu-atalhos-btn');
+                if (botao) botao.setAttribute('aria-expanded', 'false');
+            };
+            window.irParaAdmin = function() { window.navegarCom('admin.html'); };
+            document.addEventListener('click', function(event) {
+                var menu = document.getElementById('menuAtalhos');
+                if (menu && !menu.contains(event.target)) window.fecharMenuAtalhos();
+            });
+        </script>
+        <button class="control-btn" id="darkModeBtn" aria-label="Alternar modo escuro" oncontextmenu="return false" aria-pressed="false">🌙</button>
         <script>(function(){var t=localStorage.getItem('theme');var b=document.getElementById('darkModeBtn');if(b&&t==='dark'){b.innerText='☀️';b.setAttribute('aria-pressed','true');}})();</script>
     </div>
 
-<header role="banner">
-        <img src="logo.png" alt="Logo BibVania — BIBLIOTECA MÓVEL DO(A) EMTI PROFESSORA MARIA VÂNIA FARIAS LINHARES" class="header-logo" onerror="this.onerror=null;this.style.display='none';">
+<header role="banner" aria-label="Cabeçalho">
+        <img src="logo.png" alt="Logo Geladeiroteca Online — Biblioteca Móvel" class="header-logo" fetchpriority="high" onerror="(function(img){var t=0;var fn=function(){if(t<3){t++;img.src=img.src.split('?')[0]+'?r='+t;img.onerror=fn}else{img.onerror=null;img.style.display='none'}};img.onerror=fn;fn()})(this)">
         <h1>GELADEIROTECA ONLINE</h1>
-        <div class="school-name" id="nomeEscolaExibicao" aria-label="BIBLIOTECA MÓVEL DO(A) EMTI PROFESSORA MARIA VÂNIA FARIAS LINHARES"><span>BIBLIOTECA MÓVEL DO(A) EMTI</span><span>PROFESSORA MARIA VÂNIA FARIAS LINHARES</span></div>
+        <div class="school-name" id="nomeEscolaExibicao" aria-label="Biblioteca Móvel da EMTI Professora Maria Vânia Farias Linhares"><span>BIBLIOTECA MÓVEL DA EMTI</span><span>PROFESSORA MARIA VÂNIA FARIAS LINHARES</span></div>
     </header>
 
     <div class="container">
-        <nav aria-label="Navegação principal">
-            <button onclick="irParaAdmin()" class="btn-block btn-primary">
-                <span aria-hidden="true">🔑</span> ÁREA DO BIBLIOTECÁRIO
-            </button>
-        </nav>
 
         <main id="conteudo-principal">
         <div class="card">
             <div class="form-group">
-                <label for="filtroCategoriaPublico">CATEGORIA</label>
+                <label for="filtroCategoriaPublico">CLASSIFICAÇÃO INDICATIVA</label>
                 <select id="filtroCategoriaPublico" aria-label="Filtrar por categoria" style="width:100%;padding:0.5rem;font-size:0.95rem;border:1px solid var(--border);border-radius:6px;background:var(--card-bg);color:var(--text);cursor:pointer;">
                     <option value="">TODOS (0)</option>
                 </select>
@@ -142,11 +266,16 @@
                     <input type="search" id="buscaLivros" placeholder="BUSCAR LIVRO..." aria-label="Buscar livros no acervo" autocomplete="off">
                 </div>
             </div>
-            
+            <div style="text-align:right;margin-top:-0.25rem;">
+                <button onclick="baixarAcervoPdf()" style="font-size:0.75rem;font-weight:700;color:var(--primary);background:none;border:none;cursor:pointer;opacity:0.85;padding:0;">📥 BAIXAR ACERVO COMPLETO</button>
+            </div>
+
         </div>
+        <div id="carrossel-outer" style="position:relative;">
         <section id="listaLivros" aria-label="Lista de livros do acervo" aria-live="polite">
             <div style="text-align:center;padding:2rem;color:var(--text-light);font-size:1.2rem;" role="status">CARREGANDO ACERVO...</div>
         </section>
+        </div>
         <div id="acervo-nav-wrapper"></div>
         </main>
     </div>
@@ -155,22 +284,24 @@
     ==========================================================================
     MÓDULO PRINCIPAL (ES Module) — lógica do catálogo público
     ==========================================================================
-    Importa DB (Supabase), iniciarBuscaVoz e spanCategoria de bibvania.js.
+    Importa DB (Supabase), iniciarBuscaVoz e spanCategoria de bibcore.js.
     Expõe window.DB para scripts inline e o script UMD carregado no final.
     Contém: estado da lista, renderização, paginação/carrossel, capas,
     filtros, busca, realtime, lightbox e navegação para o admin.
     ==========================================================================
     -->
     <script type="module">
-        import DB, { iniciarBuscaVoz, spanCategoria } from './bibvania.js';
+        import DB, { iniciarBuscaVoz, spanCategoria, fmtAutor, fmtVolumeEdicao, escapeHtml } from './bibcore.js';
         window.DB = DB;
+        window.spanCategoria = spanCategoria;
+        window.fmtAutor = fmtAutor;
+        window.escapeHtml = escapeHtml;
+        window.fmtVolumeEdicao = fmtVolumeEdicao;
 
         let fontSize = parseInt(localStorage.getItem('fontSize')) || 16; if (fontSize === 18) { fontSize = 16; localStorage.setItem('fontSize', 16); }
         // ── Estado global do catálogo ──────────────────────────────────────
         let todosLivros = [];          // Array com todos os livros do banco (imutável entre renders)
         let _acervoCarregado = false;  // true após primeiro carregamento completo (evita duplo load)
-        let idsAtrasadosCache = [];     // IDs de livros com empréstimo atrasado (destaque vermelho)
-        let empsAtivosCache = {};       // { livro_id → [emprestimos] } para badges de disponibilidade
         // Collator instanciado uma vez — localeCompare inline é ~10x mais lento
         // Collator instanciado uma vez — localeCompare inline é ~10x mais lento
         // sensitivity: 'base' → ignora acentos e maiúsculas na ordenação
@@ -187,17 +318,10 @@
         function _bindAccessBtn(id, fn) {
             var btn = document.getElementById(id);
             if (!btn) return;
-            btn.addEventListener('touchstart', function(e) { e.preventDefault(); fn(); }, { passive: false });
+            btn.addEventListener('touchend', function(e) { e.preventDefault(); fn(); }, { passive: false });
             btn.addEventListener('click', fn);
         }
         _bindAccessBtn('darkModeBtn', function(){ toggleDarkMode(); });
-        // Clique em tag: preenche busca com #palavra-chave e filtra sem piscar
-        window.filtrarPorTag = (tag) => {
-            const input = document.getElementById('buscaLivros');
-            input.value = '#' + tag;
-            input.dispatchEvent(new Event('input'));
-            renderAcervo();
-        };
 
         window.toggleDarkMode = () => {
             const theme = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
@@ -224,6 +348,15 @@
         // ── Utilitários ────────────────────────────────────────────
         function normalizar(str) {
             return (str || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase();
+        }
+        function normalizarCategoriaAcervo(categoria) {
+            const c = normalizar(categoria).trim();
+            if (!c) return '';
+            if (c === 'INFANTIL (1º AO 4º)' || c === 'MATERIAL PEDAGOGICO' || c === 'POESIA' || c.startsWith('DIDATICO') || c === 'DE REFERENCIA' || c.startsWith('EJA')) return 'LIVRE';
+            if (c === 'INFANTOJUVENIL (5º E 6º)' || c === 'CLASSICOS' || c === 'REGIONAIS' || c === 'CLASSICOS E REGIONAIS') return '10 ANOS';
+            if (c === 'JUVENIL I (7º AO 9º)') return '12 ANOS';
+            if (c === 'JUVENIL II (ENSINO MEDIO)') return '14 ANOS';
+            return c;
         }
         // Retorna rótulo legível do perfil do leitor (ex: "Aluna, 7º ano, 7A") para exibição nos cards de empréstimo.
         function obterRotuloGenero(sexo, turma, ano) {
@@ -260,14 +393,18 @@
          *   - 'tem'  → img com src em branco; _injetarCapas preencherá via preload
          *   - null   → "CARREGANDO CAPA" até _injetarCapas resolver
          */
-        function renderizarLivro(l, isAtrasado) {
+        function renderizarLivro(l, isAtrasado, isFirst) {
             const borderStyle = isAtrasado ? 'style="border-color:var(--danger); border-width: 2px;"' : '';
-
+            const imgAttrs = isFirst ? 'loading="eager" fetchpriority="high"' : 'loading="lazy"';
+            const titulo = escapeHtml(l.titulo);
+            const alt = escapeHtml(l.alt_text || ('Capa do livro: ' + (l.titulo || '')));
+            const imagem = /^https?:\/\//i.test(String(l.imagem_url || '')) ? escapeHtml(l.imagem_url) : '';
+            const isbn = escapeHtml(l.isbn || '');
+            const autor = fmtAutor(l.autor, '');
             let wrapClasses, labelHtml;
             if (!l._capaResolvida) {
                 if (_idsComCapaCache && !_idsComCapaCache.has(l.id)) {
-                    l._capaResolvida = 'sem';
-                    l.imagem_url = null;
+                    l._capaResolvida = 'sem'; l.imagem_url = null;
                     wrapClasses = 'book-cover-wrap sem-capa capa-carregada';
                     labelHtml = '<span class="book-cover-label" aria-hidden="true">SEM<br>CAPA</span>';
                 } else {
@@ -281,35 +418,29 @@
                 wrapClasses = 'book-cover-wrap sem-capa capa-carregada';
                 labelHtml = '<span class="book-cover-label" aria-hidden="true">SEM<br>CAPA</span>';
             }
-
             return `
                 <article class="book-item" ${borderStyle}>
                     <div class="book-header">
-                        <div class="${wrapClasses}" data-lightbox-id="${l.id}" data-livro-id="${l.id}" data-lightbox-titulo="${l.titulo.replace(/"/g, '&quot;')}">
+                        <div class="${wrapClasses}" data-lightbox-id="${Number(l.id)}" data-livro-id="${Number(l.id)}" data-lightbox-titulo="${titulo}" aria-label="${alt}">
                             ${labelHtml}
-                            <img class="cover-img" src="${l._capaResolvida === 'tem' && l.imagem_url ? l.imagem_url : ''}" alt="Capa: ${l.titulo.replace(/"/g,'&quot;')}">
+                            <img class="cover-img" ${imgAttrs} src="${l._capaResolvida === 'tem' ? imagem : ''}" alt="${alt}">
                         </div>
                         <div class="book-header-inner">
-                            <div class="book-title">${l.titulo}</div>
+                            <div class="book-title">${titulo}</div>
+                            ${window.fmtVolumeEdicao ? window.fmtVolumeEdicao(l.volume, l.edicao) : ''}
                             <div class="book-meta-box">
-                                <div class="book-meta-item book-meta-single meta-autor"><strong>AUTOR:</strong> ${l.autor || 'NÃO INFORMADO'}</div>
-                                <div class="book-meta-item book-meta-single"><strong>ISBN:</strong> ${l.isbn || 'N/A'}</div>
-                                <div class="book-meta-item book-meta-single meta-categoria"><strong>CAT.:</strong> ${spanCategoria(l.categoria)}${l.prateleira ? ` <span style="color:var(--text-light);font-weight:700;">(P${l.prateleira.split('/').map(p=>p.trim()).join('/P')})</span>` : ''}</div>
-                                <div class="book-meta-item book-meta-single"><strong>DOWNLOAD:</strong> ${l.pdf_url ? `<a href="${l.pdf_url}" target="_blank" rel="noopener" onclick="event.stopPropagation()" style="color:var(--primary);font-weight:700;text-decoration:none;">BAIXAR PDF</a>` : ''}</div>
+                                <div class="book-meta-item book-meta-single meta-autor" aria-label="Autor: ${autor || 'não informado'}"><strong aria-hidden="true">AUTOR:</strong> ${autor}</div>
+                                <div class="book-meta-item book-meta-single" aria-label="ISBN: ${isbn || 'não informado'}"><strong aria-hidden="true">ISBN:</strong> ${isbn}</div>
+                                <div class="book-meta-item book-meta-single meta-categoria" aria-label="Classificação indicativa: ${escapeHtml(l.categoria || 'não informada')}"><strong aria-hidden="true">ClassInd:</strong> ${spanCategoria(l.categoria)}</div>
                             </div>
-                            <div class="book-status-row stacked">
-                                <div class="book-tags-inline">
-                                    ${l.palavras_chave && l.palavras_chave.length ? l.palavras_chave.map(p => `<span class="tag-keyword" onclick="event.stopPropagation();filtrarPorTag('${p}')">#${p}</span>`).join(' ') : ''}
-                                </div>
-                                <div class="book-status-badge-row">
-                                    <span style="background:${l.quantidade_disponivel > 0 ? '#bbf7d0' : '#fecaca'};color:${l.quantidade_disponivel > 0 ? '#14532d' : '#7f1d1d'};font-weight:700;padding:0 0.15em;border-radius:2px;font-size:0.68rem;">${l.quantidade_disponivel}/${l.quantidade_total} DISPONÍVEIS</span>
-                                </div>
-                            </div>
+                            <div class="book-status-row stacked"><div class="book-status-badge-row"><div class="badge-reserva-grupo">
+                                <span style="background:${l.quantidade_disponivel > 0 ? '#bbf7d0' : '#fecaca'};color:${l.quantidade_disponivel > 0 ? '#14532d' : '#7f1d1d'};font-weight:700;padding:0 0.15em;border-radius:2px;font-size:0.68rem;" aria-label="${Number(l.quantidade_disponivel) || 0} de ${Number(l.quantidade_total) || 0} exemplares disponíveis">${Number(l.quantidade_disponivel) || 0}/${Number(l.quantidade_total) || 0} DISPONÍVEIS</span>
+                                <button type="button" class="btn-block btn-primary btn-reservar-livro" onclick="window.abrirReservaPublica(${Number(l.id)}, this)" ${Number(l.quantidade_disponivel) > 0 ? '' : 'disabled'} aria-label="Reservar ${titulo}">RESERVAR</button>
+                            </div></div></div>
                         </div>
                     </div>
                 </article>`;
         }
-
         // Token de renderização
         let _renderToken = 0;
         // _capaToken removido: cancelamento por renderToken é suficiente
@@ -358,7 +489,7 @@
 
             const frag = document.createDocumentFragment();
             const tmp = document.createElement('div');
-            tmp.innerHTML = lote.map(l => renderizarLivro(l, false)).join('');
+            tmp.innerHTML = lote.map((l, i) => renderizarLivro(l, false, i === 0)).join('');
             while (tmp.firstChild) frag.appendChild(tmp.firstChild);
             lista.appendChild(frag);
 
@@ -371,43 +502,79 @@
             _prefetchCapasVizinhas(_paginaAtual, token);
         }
 
+
+        // Formata número como ordinal: 1 → "1º", 2 → "2º", etc.
+        function _ordinal(n) { return n + 'º'; }
+        // Formata aria-label da paginação: "1º de 1304 títulos"
+        function _ariaInfoPagina(posicao, total) {
+            return _ordinal(posicao) + ' de ' + total + (total === 1 ? ' título' : ' títulos');
+        }
+        // Permite clicar no contador e saltar diretamente para uma posição.
+        function _escolherPaginaCarrossel() {
+            const total = _totalPaginas();
+            if (!total) return;
+            const resposta = window.prompt(`IR PARA A POSIÇÃO (1 A ${total}):`, String(_paginaAtual + 1));
+            if (resposta === null) return;
+            const posicao = Number(String(resposta).trim());
+            if (!Number.isInteger(posicao) || posicao < 1 || posicao > total) {
+                window.alert(`Informe um número inteiro entre 1 e ${total}.`);
+                return;
+            }
+            _irParaPagina(posicao - 1, _renderToken);
+        }
         // Atualiza o contador "X / Y" exibido no centro do nav do carrossel.
         function _atualizarNavCarrossel() {
             const nav = document.getElementById('acervo-nav-carrossel');
             if (!nav) return;
             const total = _totalPaginas();
             const info = nav.querySelector('.carrossel-info');
-            if (info) info.textContent = `${_paginaAtual + 1} / ${total}`;
+            if (info) {
+                info.innerHTML = `<button type="button" class="carrossel-info-inner">${_paginaAtual + 1} / ${total}</button>`;
+                info.querySelector('.carrossel-info-inner').addEventListener('click', _escolherPaginaCarrossel);
+                info.setAttribute('aria-label', _ariaInfoPagina(_paginaAtual + 1, _filtradosAtual.length));
+            }
         }
 
-        // Cria (ou recria) o elemento de navegação do carrossel com botões ◀ / ▶ e contador.
+        // Cria (ou recria) o elemento de navegação do carrossel com botões laterais sobrepostos.
         function _criarNavCarrossel(token) {
             let nav = document.getElementById('acervo-nav-carrossel');
             if (nav) nav.remove();
             nav = document.createElement('div');
             nav.id = 'acervo-nav-carrossel';
-            nav.style.cssText = 'display:flex;align-items:center;justify-content:center;gap:1rem;padding:0.5rem 0;pointer-events:none;flex-shrink:0;';
-
-            const btnPrev = document.createElement('button');
-            btnPrev.textContent = '◀';
-            btnPrev.setAttribute('aria-label', 'Página anterior');
-            btnPrev.style.cssText = 'background:var(--primary);color:#fff;border:none;border-radius:50%;width:2.6rem;height:2.6rem;font-size:1.1rem;cursor:pointer;flex-shrink:0;pointer-events:auto;box-shadow:0 2px 8px rgba(0,0,0,0.4);display:flex;align-items:center;justify-content:center;line-height:1;';
-            btnPrev.addEventListener('click', () => _irParaPagina(_paginaAtual - 1, _renderToken));
+            // Nav contém apenas o contador; setas ficam absolutas no carrossel-outer
+            nav.style.cssText = 'pointer-events:none;';
 
             const info = document.createElement('span');
             info.className = 'carrossel-info';
-            info.style.cssText = 'font-size:0.8rem;color:var(--text-light);min-width:4rem;text-align:center;pointer-events:auto;';
-            info.textContent = `1 / ${_totalPaginas()}`;
-
-            const btnNext = document.createElement('button');
-            btnNext.textContent = '▶';
-            btnNext.setAttribute('aria-label', 'Próxima página');
-            btnNext.style.cssText = 'background:var(--primary);color:#fff;border:none;border-radius:50%;width:2.6rem;height:2.6rem;font-size:1.1rem;cursor:pointer;flex-shrink:0;pointer-events:auto;box-shadow:0 2px 8px rgba(0,0,0,0.4);display:flex;align-items:center;justify-content:center;line-height:1;';
-            btnNext.addEventListener('click', () => _irParaPagina(_paginaAtual + 1, _renderToken));
-
-            nav.appendChild(btnPrev);
+            info.style.cssText = '';
+            info.innerHTML = `<button type="button" class="carrossel-info-inner">1 / ${_totalPaginas()}</button>`;
+            info.querySelector('.carrossel-info-inner').addEventListener('click', _escolherPaginaCarrossel);
+            info.setAttribute('aria-label', _ariaInfoPagina(1, _filtradosAtual.length));
             nav.appendChild(info);
-            nav.appendChild(btnNext);
+
+            // Expor navegação global
+            window._carrosselNav = (dir) => _irParaPagina(dir === 'prev' ? _paginaAtual - 1 : _paginaAtual + 1, _renderToken);
+
+            // Setas ancoradas no carrossel-outer (não sofrem overflow:hidden do card)
+            const outer = document.getElementById('carrossel-outer');
+            if (outer) {
+                outer.querySelectorAll('.carrossel-btn-lateral').forEach(b => b.remove());
+                const btnPrev = document.createElement('button');
+                btnPrev.className = 'carrossel-btn-lateral';
+                btnPrev.setAttribute('data-dir', 'prev');
+                btnPrev.setAttribute('aria-label', 'Página anterior');
+                btnPrev.innerHTML = '&#10094;';
+                btnPrev.onclick = () => window._carrosselNav('prev');
+                const btnNext = document.createElement('button');
+                btnNext.className = 'carrossel-btn-lateral';
+                btnNext.setAttribute('data-dir', 'next');
+                btnNext.setAttribute('aria-label', 'Próxima página');
+                btnNext.innerHTML = '&#10095;';
+                btnNext.onclick = () => window._carrosselNav('next');
+                outer.appendChild(btnPrev);
+                outer.appendChild(btnNext);
+            }
+
             return nav;
         }
 
@@ -441,16 +608,12 @@
             const termo = normalizar(document.getElementById('buscaLivros').value);
             const catFiltro = document.getElementById('filtroCategoriaPublico')?.value || '';
 
-            let filtrados = catFiltro ? todosLivros.filter(l => (l.categoria||'') === catFiltro) : todosLivros;
+            let filtrados = catFiltro ? todosLivros.filter(l => normalizarCategoriaAcervo(l.categoria) === catFiltro) : todosLivros;
             if (termo) {
-                const termoTag = termo.startsWith('#') ? termo.slice(1) : null;
                 filtrados = filtrados.filter(l =>
-                    termoTag
-                        ? (l.palavras_chave||[]).some(p => normalizar(p).includes(termoTag))
-                        : (normalizar(l.titulo).includes(termo) ||
-                           (l.isbn && l.isbn.toUpperCase().includes(termo)) ||
-                           (l.autor && normalizar(l.autor).includes(termo)) ||
-                           (l.palavras_chave||[]).some(p => normalizar(p).includes(termo)))
+                    normalizar(l.titulo).includes(termo) ||
+                    (l.isbn && l.isbn.toUpperCase().includes(termo)) ||
+                    (l.autor && normalizar(l.autor).includes(termo))
                 );
             }
 
@@ -468,15 +631,28 @@
                 return;
             }
 
-            // Se mesma lista, só atualizar capas pendentes
+            // Se mesma lista (mesmos IDs, mesma ordem), evitar re-render completo do carrossel —
+            // mas ainda assim atualizar as referências e, se algum dado exibido (disponibilidade)
+            // mudou, re-renderizar a página atual em vez de só as capas. Isso corrige o badge
+            // "X/Y DISPONÍVEIS" ficando desatualizado até um reload manual.
             const novoHash = filtrados.map(l => l.id).join(',');
             if (lista.dataset.lastHtmlHash === novoHash) {
-                const inicio = _paginaAtual * LOTE_CARROSSEL;
-                _injetarCapas(filtrados.slice(inicio, inicio + LOTE_CARROSSEL), token);
+                const dadosMudaram = _filtradosAtual.some((l, i) =>
+                    filtrados[i] && (l.quantidade_disponivel !== filtrados[i].quantidade_disponivel ||
+                                     l.quantidade_total !== filtrados[i].quantidade_total));
+                _filtradosAtual = filtrados;
+                window._filtradosAtual = filtrados;
+                if (dadosMudaram) {
+                    _renderPaginaAtual(token); // mantém _paginaAtual, só atualiza o conteúdo exibido
+                } else {
+                    const inicio = _paginaAtual * LOTE_CARROSSEL;
+                    _injetarCapas(filtrados.slice(inicio, inicio + LOTE_CARROSSEL), token);
+                }
                 return;
             }
             lista.dataset.lastHtmlHash = novoHash;
             _filtradosAtual = filtrados;
+            window._filtradosAtual = filtrados;
             _paginaAtual = 0;
 
             // Criar nav e inserir na lista
@@ -496,13 +672,12 @@
         // Usa new Image() para popular o cache do browser sem tocar no DOM.
         function _prefetchCapasVizinhas(paginaAtual, token) {
             if (token !== _renderToken) return;
-            const vizinhos = [-1, 1, -2, 2]; // ordem de prioridade: imediatos primeiro
+            const vizinhos = [-1, 1, -2, 2];
             const total = _filtradosAtual.length;
             vizinhos.forEach(offset => {
                 const idx = ((paginaAtual + offset) % total + total) % total;
                 const livro = _filtradosAtual[idx];
                 if (!livro || !livro.imagem_url || livro._capaResolvida === 'sem') return;
-                // Só pré-carrega se ainda não está em cache
                 if (livro._capaResolvida === 'tem') return;
                 const img = new Image();
                 img.onload = () => {
@@ -521,10 +696,9 @@
 
         // Injeta capas diretamente na <img> do DOM — sem new Image() intermediário (evita piscada)
         function _injetarCapas(lote, renderToken) {
-            lote.forEach(l => {
+            lote.forEach((l, i) => {
                 const wrap = document.querySelector(`[data-livro-id="${l.id}"]`);
                 const card = wrap?.closest('.book-item');
-                if (card) card.style.opacity = '0'; // Esconde o card até estar pronto
 
                 if (!l.imagem_url || l._capaResolvida === 'sem') {
                     l._capaResolvida = 'sem';
@@ -542,12 +716,11 @@
                 if (!wrap) return;
                 const img = wrap.querySelector('img.cover-img');
                 if (!img) return;
+                if (card) card.style.opacity = '0'; // Só esconde quando vai realmente esperar o onload
 
-                const tempImg = new Image();
-                tempImg.fetchPriority = 'high';
-                tempImg.onload = () => {
+                const _onLoad = (naturalWidth, naturalHeight) => {
                     if (renderToken !== _renderToken) return;
-                    if (tempImg.naturalWidth > 0 && tempImg.naturalWidth === tempImg.naturalHeight && tempImg.naturalWidth <= 300) {
+                    if (naturalWidth > 0 && naturalWidth === naturalHeight && naturalWidth <= 300) {
                         l._capaResolvida = 'sem'; l.imagem_url = null;
                         if (_idsComCapaCache) _idsComCapaCache.delete(l.id);
                         wrap.classList.add('sem-capa', 'capa-carregada');
@@ -556,7 +729,6 @@
                         return;
                     }
                     l._capaResolvida = 'tem';
-                    img.src = tempImg.src;
                     wrap.classList.remove('sem-capa');
                     wrap.classList.add('has-image', 'capa-carregada');
                     const lbl = wrap.querySelector('.book-cover-label');
@@ -564,7 +736,7 @@
                     img.style.opacity = '1';
                     if (card) card.style.opacity = '1';
                 };
-                tempImg.onerror = () => {
+                const _onError = () => {
                     if (renderToken !== _renderToken) return;
                     l._capaResolvida = 'sem'; l.imagem_url = null;
                     if (_idsComCapaCache) _idsComCapaCache.delete(l.id);
@@ -572,7 +744,21 @@
                     _setLabelSemCapa(wrap);
                     if (card) card.style.opacity = '1';
                 };
-                tempImg.src = l.imagem_url;
+                if (i === 0) {
+                    img.onload = () => _onLoad(img.naturalWidth, img.naturalHeight);
+                    img.onerror = _onError;
+                    if (img.src !== l.imagem_url) img.src = l.imagem_url;
+                    else if (img.complete) _onLoad(img.naturalWidth, img.naturalHeight);
+                } else {
+                    const tempImg = new Image();
+                    tempImg.fetchPriority = 'high';
+                    tempImg.onload = () => {
+                        _onLoad(tempImg.naturalWidth, tempImg.naturalHeight);
+                        if (l._capaResolvida === 'tem') img.src = tempImg.src;
+                    };
+                    tempImg.onerror = _onError;
+                    tempImg.src = l.imagem_url;
+                }
             });
         }
 
@@ -580,7 +766,7 @@
 
         /**
          * _buscarEAtualizar(forceReload)
-         * Núcleo do carregamento: busca getLivros() + getEmprestimosAtivos() no Supabase,
+         * Núcleo do carregamento: busca getLivros() no Supabase,
          * resolve capas direto do imagem_url e renderiza. Preserva capas já resolvidas
          * em memória (sem reload visual) quando forceReload=false.
          * forceReload=true → descarta cache (bfcache pageshow, botão "Tentar novamente").
@@ -594,10 +780,16 @@
                 if (!forceReload) {
                     todosLivros.forEach(l => { if (l._capaResolvida) capaCache[l.id] = { url: l.imagem_url, res: l._capaResolvida }; });
                 }
-                const [livros, emps] = await Promise.all([
-                    window.DB.getLivros(),
-                    window.DB.getEmprestimosAtivos()
-                ]);
+                // SEGURANÇA (set/2026): a página pública não busca mais nada de
+                // emprestimos. O destaque visual de "atrasado" (isAtrasado em
+                // renderizarLivro) nunca chegou a ser ligado — a chamada real
+                // sempre passa false — então não há motivo pra expor nenhum
+                // dado de empréstimo aqui, nem via view segura. Se o destaque
+                // for implementado de verdade no futuro, volte a buscar
+                // window.DB.getStatusEmprestimosPublico() (livro_id + atrasado,
+                // sem dados de aluno) e passe isAtrasado de verdade pra
+                // renderizarLivro() em vez do false fixo atual.
+                const livros = await window.DB.getLivros();
                 todosLivros = livros;
                 // getLivros() já traz imagem_url — resolver capas direto, sem requests extras
                 todosLivros.forEach(l => {
@@ -613,12 +805,39 @@
                     });
                 }
                 _livrosOrdenados = [...todosLivros].sort((a, b) => _collator.compare(a.titulo, b.titulo));
-                idsAtrasadosCache = [...new Set(emps.filter(e=>e.atrasado).map(e=>e.livro_id))];
-                empsAtivosCache = {};
-                emps.forEach(e => { (empsAtivosCache[e.livro_id]||(empsAtivosCache[e.livro_id]=[])).push(e); });
+                window._livrosOrdenados = _livrosOrdenados;
                 _acervoCarregado = true;
                 _popularCategoriasFiltro();
                 renderAcervo();
+
+                // Pré-carregar todas as capas no cache do browser em background
+                // (mesma estratégia do admin: aguarda a 1ª capa carregar antes de disparar o resto,
+                //  evitando saturar a fila HTTP e atrasar o primeiro card visível)
+                (function _preCarregarCapas() {
+                    if (!_preCarregarCapas._cache) _preCarregarCapas._cache = new Set();
+                    const cache = _preCarregarCapas._cache;
+                    const urls = todosLivros.filter(l => l.imagem_url).map(l => l.imagem_url);
+                    const firstUrl = urls[0];
+                    const rest = urls.slice(1);
+                    function _prefetchRest() {
+                        rest.forEach(function(url, i) {
+                            if (cache.has(url)) return;
+                            cache.add(url);
+                            setTimeout(function() {
+                                const img = new Image();
+                                img.src = url;
+                            }, i * 50);
+                        });
+                    }
+                    if (firstUrl) {
+                        cache.add(firstUrl);
+                        const first = new Image();
+                        first.onload = first.onerror = _prefetchRest;
+                        first.src = firstUrl;
+                    } else {
+                        _prefetchRest();
+                    }
+                })();
             } catch(err) {
                 console.error('Erro ao carregar acervo:', err);
                 const msgErro = err?.message || JSON.stringify(err) || 'Erro desconhecido';
@@ -655,7 +874,7 @@
             if (!sel || !todosLivros.length) return;
             const cats = window.DB?.CATEGORIAS || [];
             const contagem = {};
-            todosLivros.forEach(l => { if (l.categoria) contagem[l.categoria] = (contagem[l.categoria]||0)+1; });
+            todosLivros.forEach(l => { const faixa = normalizarCategoriaAcervo(l.categoria); if (faixa) contagem[faixa] = (contagem[faixa]||0)+1; });
             const total = todosLivros.length;
             sel.innerHTML = `<option value="">TODOS (${total})</option>` +
                 cats.filter(c => contagem[c]).map(c => `<option value="${c}">${c} (${contagem[c]})</option>`).join('');
@@ -699,7 +918,14 @@
                 }
                 debounce();
             });
-            window.DB.onEmprestimosChange(debounce);
+            // SEGURANÇA (set/2026): não assina mais onEmprestimosChange aqui.
+            // emprestimos guarda dados de aluno e só authenticated pode lê-la
+            // (RLS); o Realtime do Supabase já filtra por RLS por padrão, mas
+            // não há por que essa página abrir um canal pra uma tabela que
+            // não deveria ler de jeito nenhum — ainda mais sem uso real do
+            // conteúdo (ver mudança #21). quantidade_disponivel em livros já
+            // é recalculada pelo trigger a cada mudança em emprestimos, e
+            // onLivrosChange acima já cobre esse refresh.
             setInterval(debounce, 60000);
 
             await carregarLivros();
@@ -721,14 +947,264 @@
             btn.addEventListener('click', () => { inputEl.value = ''; atualizar(); inputEl.focus(); onClear(); });
         }
 
-        window.irParaAdmin = async function() {
-            try {
-                const session = await window.DB.getSession();
-                navegarCom(session ? 'admin.html' : 'login.html');
-            } catch(e) {
-                navegarCom('login.html');
+        let _livroReservaAtual = null;
+        let _pessoaReservaAtual = null;
+        let _reservaPublicaOpener = null;
+        let _buscaReservaToken = 0;
+        const _escapeReserva = valor => String(valor ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+        function _rotuloPessoaReserva(p) {
+            if (p.tipo === 'funcionario') return p.sexo === 'F' ? 'FUNCIONÁRIA' : 'FUNCIONÁRIO';
+            if (p.tipo === 'visitante') return `${p.sexo === 'F' ? 'LEITORA' : 'LEITOR'} · VISITANTE`;
+            return `${p.sexo === 'F' ? 'ALUNA' : 'ALUNO'} · ${p.ano_aluno || '—'}º · ${p.turma_aluno || '—'}`;
+        }
+
+        function _tiposBuscaReserva() {
+            const tipos = [];
+            if (document.getElementById('reservaFiltroFuncionario').checked) tipos.push('funcionario');
+            if (document.getElementById('reservaFiltroVisitante').checked) tipos.push('visitante');
+            return tipos.length ? tipos : ['aluno'];
+        }
+
+        function _atualizarAjudaFiltroReserva() {
+            const tipos = _tiposBuscaReserva();
+            const labels = { aluno: 'ALUNOS', funcionario: 'FUNCIONÁRIOS', visitante: 'VISITANTES' };
+            const descricao = tipos.map(tipo => labels[tipo]).join(' E ');
+            document.getElementById('reservaPerfilAjuda').textContent = tipos.length === 1 && tipos[0] === 'aluno'
+                ? 'NENHUMA OPÇÃO MARCADA: A BUSCA É POR ALUNOS.'
+                : `BUSCANDO: ${descricao}.`;
+        }
+
+        function _mostrarResultadoBuscaReserva(mensagem) {
+            const lista = document.getElementById('reservaPessoasResultados');
+            lista.replaceChildren();
+            const aviso = document.createElement('p');
+            aviso.className = 'reserva-ajuda';
+            aviso.textContent = mensagem;
+            lista.appendChild(aviso);
+        }
+
+        async function _buscarPessoasReserva(termo) {
+            const token = ++_buscaReservaToken;
+            _pessoaReservaAtual = null;
+            document.getElementById('reservaPessoaSelecionada').classList.add('hidden');
+            document.getElementById('reservaConfirmar').disabled = true;
+            if (termo.trim().length < 1) {
+                document.getElementById('reservaPessoasResultados').replaceChildren();
+                return;
             }
+            _mostrarResultadoBuscaReserva('BUSCANDO…');
+            try {
+                const pessoas = await DB.buscarPessoasParaReserva(termo.trim(), _tiposBuscaReserva());
+                if (token !== _buscaReservaToken) return;
+                const lista = document.getElementById('reservaPessoasResultados');
+                lista.replaceChildren();
+                if (!pessoas.length) {
+                    _mostrarResultadoBuscaReserva('Nenhum cadastro desse perfil corresponde ao nome digitado. Confira a grafia, marque outro perfil ou consulte a biblioteca.');
+                    return;
+                }
+                pessoas.forEach(p => {
+                    const btn = document.createElement('button');
+                    btn.type = 'button';
+                    btn.className = 'reserva-pessoa-opcao';
+                    btn.innerHTML = `<strong>${_escapeReserva(p.nome)}</strong><span>${_escapeReserva(_rotuloPessoaReserva(p))}</span>`;
+                    btn.addEventListener('click', () => {
+                        _pessoaReservaAtual = p;
+                        document.getElementById('reservaPessoaSelecionadaTexto').textContent = `${p.nome} · ${_rotuloPessoaReserva(p)}`;
+                        document.getElementById('reservaPessoaRegra').textContent = p.tipo === 'funcionario'
+                            ? 'Funcionários podem manter várias reservas e empréstimos ativos.'
+                            : 'Alunos e visitantes podem reservar mesmo com empréstimo ativo; a biblioteca só poderá concluir depois da devolução.';
+                        document.getElementById('reservaPessoaSelecionada').classList.remove('hidden');
+                        document.getElementById('reservaConfirmar').disabled = false;
+                        lista.replaceChildren();
+                        document.getElementById('reservaPessoaBusca').focus();
+                    });
+                    lista.appendChild(btn);
+                });
+            } catch (erro) {
+                if (token === _buscaReservaToken) {
+                    const detalhe = String(erro?.message || '').toLowerCase();
+                    const rpcDesatualizada = erro?.code === 'PGRST202' || detalhe.includes('schema cache') || detalhe.includes('bv_buscar_pessoas_reserva');
+                    _mostrarResultadoBuscaReserva(rpcDesatualizada
+                        ? 'A busca no banco precisa ser atualizada. Execute o supabase_setup.sql atualizado e recarregue esta página.'
+                        : 'Não foi possível buscar pessoas agora. Tente novamente ou consulte a equipe da biblioteca.');
+                }
+                console.error('Erro ao localizar pessoa para reserva:', erro);
+            }
+        }
+
+        function _preencherDetalhesLivroReserva(livro) {
+            const autor = String(livro.autor || '').trim();
+            const autorExibido = !autor || autor.toUpperCase() === 'N/A' ? 'AUTOR NÃO INFORMADO' : autor;
+            const disponiveis = livro.quantidade_disponivel ?? 0;
+            const total = livro.quantidade_total ?? '—';
+            document.getElementById('reservaLivroTitulo').textContent = livro.titulo || 'TÍTULO NÃO INFORMADO';
+            document.getElementById('reservaLivroInfo').textContent = `AUTOR: ${autorExibido}`;
+
+            const capa = document.getElementById('reservaLivroCapa');
+            const semCapa = document.getElementById('reservaLivroSemCapa');
+            if (livro.imagem_url) {
+                capa.src = livro.imagem_url;
+                capa.alt = livro.alt_text || `Capa de ${livro.titulo || 'livro'}`;
+                capa.hidden = false;
+                semCapa.hidden = true;
+            } else {
+                capa.removeAttribute('src');
+                capa.alt = '';
+                capa.hidden = true;
+                semCapa.hidden = false;
+            }
+
+            const lista = document.getElementById('reservaLivroMetadados');
+            lista.replaceChildren();
+            const campos = [
+                ['VOLUME', livro.volume],
+                ['EDIÇÃO', livro.edicao],
+                ['ISBN', livro.isbn],
+                ['CLASSIFICAÇÃO INDICATIVA', normalizarCategoriaAcervo(livro.categoria) || livro.categoria],
+                ['EXEMPLARES', `${disponiveis} disponível(is) de ${total}`]
+            ];
+            campos.forEach(([rotulo, valor]) => {
+                const grupo = document.createElement('div');
+                grupo.className = 'reserva-livro-meta-item';
+                const dt = document.createElement('dt');
+                dt.textContent = rotulo;
+                const dd = document.createElement('dd');
+                dd.textContent = valor == null || String(valor).trim() === '' ? '—' : String(valor);
+                grupo.append(dt, dd);
+                lista.appendChild(grupo);
+            });
+        }
+
+        function _abrirFormularioReserva() {
+            const livro = _livroReservaAtual;
+            if (!livro) return;
+            _pessoaReservaAtual = null;
+            _preencherDetalhesLivroReserva(livro);
+            document.getElementById('reservaPessoaBusca').value = '';
+            document.getElementById('reservaFiltroFuncionario').checked = false;
+            document.getElementById('reservaFiltroVisitante').checked = false;
+            _atualizarAjudaFiltroReserva();
+            document.getElementById('reservaPessoaSelecionada').classList.add('hidden');
+            document.getElementById('reservaConfirmar').disabled = true;
+            document.getElementById('reservaPublicaMsg').textContent = '';
+            document.getElementById('reservaPessoasResultados').replaceChildren();
+            document.getElementById('reservaRegrasModal').classList.add('hidden');
+            document.getElementById('reservaPublicaModal').classList.remove('hidden');
+            setTimeout(() => document.getElementById('reservaPessoaBusca').focus(), 0);
+        }
+
+        window.abrirReservaPublica = function(livroId, opener) {
+            const livro = todosLivros.find(l => Number(l.id) === Number(livroId));
+            if (!livro || Number(livro.quantidade_disponivel) <= 0) {
+                alert('Este livro está indisponível para reserva neste momento.');
+                return;
+            }
+            _livroReservaAtual = livro;
+            _pessoaReservaAtual = null;
+            _reservaPublicaOpener = opener || document.activeElement;
+            document.getElementById('reservaRegrasLivro').textContent = livro.titulo || 'LIVRO SELECIONADO';
+            document.getElementById('reservaRegrasModal').classList.remove('hidden');
+            setTimeout(() => document.getElementById('reservaRegrasContinuar').focus(), 0);
         };
+
+        function _fecharRegrasReserva() {
+            document.getElementById('reservaRegrasModal').classList.add('hidden');
+            _livroReservaAtual = null;
+            _pessoaReservaAtual = null;
+            const opener = _reservaPublicaOpener;
+            _reservaPublicaOpener = null;
+            if (opener && typeof opener.focus === 'function') opener.focus();
+        }
+
+        function _fecharReservaPublica() {
+            document.getElementById('reservaPublicaModal').classList.add('hidden');
+            _livroReservaAtual = null;
+            _pessoaReservaAtual = null;
+            const opener = _reservaPublicaOpener;
+            _reservaPublicaOpener = null;
+            if (opener && typeof opener.focus === 'function') opener.focus();
+        }
+
+        document.getElementById('reservaRegrasFechar').addEventListener('click', _fecharRegrasReserva);
+        document.getElementById('reservaRegrasVoltar').addEventListener('click', _fecharRegrasReserva);
+        document.getElementById('reservaRegrasContinuar').addEventListener('click', _abrirFormularioReserva);
+        document.getElementById('reservaRegrasModal').addEventListener('click', e => {
+            if (e.target.id === 'reservaRegrasModal') _fecharRegrasReserva();
+        });
+        document.getElementById('reservaPublicaFechar').addEventListener('click', _fecharReservaPublica);
+        document.getElementById('reservaPublicaCancelar').addEventListener('click', _fecharReservaPublica);
+        document.getElementById('reservaPublicaModal').addEventListener('click', e => {
+            if (e.target.id === 'reservaPublicaModal') _fecharReservaPublica();
+        });
+        document.getElementById('reservaPessoaBusca').addEventListener('input', e => {
+            clearTimeout(e.target._reservaTimer);
+            e.target._reservaTimer = setTimeout(() => _buscarPessoasReserva(e.target.value), 250);
+        });
+        ['reservaFiltroFuncionario', 'reservaFiltroVisitante'].forEach(id => {
+            document.getElementById(id).addEventListener('change', () => {
+                _atualizarAjudaFiltroReserva();
+                _buscarPessoasReserva(document.getElementById('reservaPessoaBusca').value);
+            });
+        });
+        document.addEventListener('keydown', e => {
+            const regrasModal = document.getElementById('reservaRegrasModal');
+            const reservaModal = document.getElementById('reservaPublicaModal');
+            const modal = regrasModal && !regrasModal.classList.contains('hidden')
+                ? regrasModal
+                : reservaModal && !reservaModal.classList.contains('hidden') ? reservaModal : null;
+            if (!modal) return;
+            if (e.key === 'Escape') {
+                e.stopImmediatePropagation();
+                if (modal === regrasModal) _fecharRegrasReserva();
+                else _fecharReservaPublica();
+                return;
+            }
+            if (e.key !== 'Tab') return;
+            const focaveis = [...modal.querySelectorAll('button:not(:disabled), input:not(:disabled), [href], [tabindex]:not([tabindex="-1"])')]
+                .filter(el => el.getClientRects().length > 0);
+            if (!focaveis.length) { e.preventDefault(); modal.focus(); return; }
+            const primeiro = focaveis[0], ultimo = focaveis[focaveis.length - 1];
+            if (e.shiftKey && (document.activeElement === primeiro || !modal.contains(document.activeElement))) {
+                e.preventDefault(); ultimo.focus();
+            } else if (!e.shiftKey && (document.activeElement === ultimo || !modal.contains(document.activeElement))) {
+                e.preventDefault(); primeiro.focus();
+            }
+        });
+        document.getElementById('reservaPublicaForm').addEventListener('submit', async e => {
+            e.preventDefault();
+            if (!_livroReservaAtual || !_pessoaReservaAtual) return;
+            const botao = document.getElementById('reservaConfirmar');
+            const msg = document.getElementById('reservaPublicaMsg');
+            botao.disabled = true;
+            msg.textContent = 'ENVIANDO RESERVA…';
+            try {
+                let resposta = await DB.criarReservaPublica(_livroReservaAtual.id, _pessoaReservaAtual.pessoa_id, false);
+                if (!resposta?.ok && resposta?.codigo === 'reserva_pendente_existente') {
+                    const trocar = confirm('Você já tem uma reserva pendente. Deseja cancelar a reserva atual e substituí-la por esta?');
+                    if (trocar) resposta = await DB.criarReservaPublica(_livroReservaAtual.id, _pessoaReservaAtual.pessoa_id, true);
+                    else { msg.textContent = 'A reserva atual foi mantida.'; botao.disabled = false; return; }
+                }
+                if (!resposta?.ok) {
+                    const mensagens = {
+                        indisponivel: 'Este livro acabou de ficar indisponível. Atualize o catálogo e tente outro exemplar.',
+                        pessoa_nao_encontrada: 'O cadastro selecionado não está mais disponível. Busque novamente.',
+                        perfil_nao_permitido: 'Este perfil não pode criar reservas.'
+                    };
+                    msg.textContent = mensagens[resposta?.codigo] || 'Não foi possível concluir a reserva. Tente novamente.';
+                    botao.disabled = false;
+                    return;
+                }
+                msg.textContent = 'RESERVA ENVIADA. A equipe da biblioteca fará a confirmação.';
+                setTimeout(_fecharReservaPublica, 1400);
+            } catch (erro) {
+                console.error('Erro ao criar reserva:', erro);
+                msg.textContent = 'Não foi possível enviar a reserva. Tente novamente em instantes.';
+                botao.disabled = false;
+            }
+        });
+
+        window.irParaAdmin = function() { navegarCom('admin.html'); };
 
         inicializar();
 
@@ -738,19 +1214,7 @@
         });
 
     </script>
-    <script src="bibvania.js"></script>
-
-    <!-- VLibras — Libras accessibility widget -->
-    <div vw class="enabled">
-        <div vw-access-button class="active"></div>
-        <div vw-plugin-wrapper>
-            <div class="vw-plugin-top-wrapper"></div>
-        </div>
-    </div>
-    <script src="https://vlibras.gov.br/app/vlibras-plugin.js"></script>
-    <script>
-        new window.VLibras.Widget('https://vlibras.gov.br/app');
-    </script>
+    <script src="bibcore.js"></script>
 
     <!--
     LIGHTBOX DE CAPA
@@ -768,9 +1232,69 @@
         </div>
         <button class="lightbox-back" onclick="fecharLightbox()">← VOLTAR</button>
     </div>
-    <footer style="text-align:center;padding:1.5rem 1rem;font-size:0.7rem;color:var(--text-light);border-top:1px solid var(--border);margin-top:2rem;" aria-label="Rodapé">
-        <p>GELADEIROTECA ONLINE v1.5 &copy; 2026 <a href="https://github.com/emtivania" rel="author noopener" style="color:inherit;">EMTI MARIA VANIA</a> &mdash; <a href="https://creativecommons.org/licenses/by/4.0/deed.pt-br" rel="license noopener" style="color:inherit;">CC-BY 4.0</a> &mdash; <a href="https://github.com/emtivania/geladeiroteca" rel="noopener" style="color:inherit;">GitHub</a> &nbsp;|&nbsp; criado com <a href="bibmaker.html" target="_blank" rel="noopener" style="color:inherit;">BibMaker v1.5</a> &mdash; Construtor de Biblioteca Online da BibVania &nbsp;|&nbsp; BibVania v1.8 &copy; 2026 <a href="https://github.com/ruanolima" rel="author noopener" style="color:inherit;">Ruan Oliveira Lima</a> &mdash; <a href="https://creativecommons.org/licenses/by/4.0/" rel="license noopener" style="color:inherit;">CC-BY-4.0</a> &mdash; <a href="https://github.com/emtivania/bibvania" rel="noopener" style="color:inherit;">GitHub</a></p>
-    </footer>
+    <div class="modal hidden" id="reservaRegrasModal" role="dialog" aria-modal="true" aria-labelledby="reservaRegrasTitulo" aria-describedby="reservaRegrasLista">
+        <div class="modal-content reserva-modal-content reserva-regras-content">
+            <button type="button" class="modal-close-btn" id="reservaRegrasFechar" aria-label="Fechar regras de reserva">×</button>
+            <h2 id="reservaRegrasTitulo">REGRAS DE RESERVA E EMPRÉSTIMO</h2>
+            <p class="reserva-regras-livro-label">LIVRO SELECIONADO</p>
+            <p id="reservaRegrasLivro" class="reserva-regras-livro"></p>
+            <ul id="reservaRegrasLista" class="reserva-regras-lista">
+                <li>A solicitação fica pendente até a confirmação da equipe da biblioteca. Enquanto estiver pendente, um exemplar é descontado da quantidade disponível; se a reserva for cancelada, ele volta ao acervo.</li>
+                <li><strong>Cadastro obrigatório:</strong> só é possível fazer uma reserva se o nome já estiver cadastrado no sistema da biblioteca.</li>
+                <li><strong>Alunos e visitantes:</strong> podem manter uma reserva pendente por vez. Se já houver outra, o sistema pedirá confirmação para substituí-la. A equipe só poderá transformar a reserva em empréstimo depois da devolução de qualquer empréstimo ativo.</li>
+                <li><strong>Funcionários:</strong> podem manter quantas reservas pendentes e empréstimos ativos quiserem, desde que haja exemplares disponíveis.</li>
+                <li>A reserva não é confirmada automaticamente: depois de continuar, selecione o cadastro correto e envie a solicitação para a biblioteca.</li>
+            </ul>
+            <div class="reserva-modal-actions">
+                <button type="button" id="reservaRegrasVoltar" class="btn-block btn-outline">VOLTAR</button>
+                <button type="button" id="reservaRegrasContinuar" class="btn-block btn-primary">CONTINUAR PARA A RESERVA</button>
+            </div>
+        </div>
+    </div>
+    <div class="modal hidden" id="reservaPublicaModal" role="dialog" aria-modal="true" aria-labelledby="reservaPublicaTitulo">
+        <div class="modal-content reserva-modal-content">
+            <button type="button" class="modal-close-btn" id="reservaPublicaFechar" aria-label="Fechar reserva">×</button>
+            <h2 id="reservaPublicaTitulo">RESERVAR LIVRO</h2>
+            <div class="reserva-livro-resumo">
+                <div class="reserva-livro-capa-wrap">
+                    <img id="reservaLivroCapa" class="reserva-livro-capa" alt="" hidden>
+                    <span id="reservaLivroSemCapa" class="reserva-livro-sem-capa" hidden>SEM CAPA</span>
+                </div>
+                <div class="reserva-livro-identificacao">
+                    <p id="reservaLivroTitulo" class="reserva-livro-titulo"></p>
+                    <p id="reservaLivroInfo" class="reserva-livro-info"></p>
+                </div>
+            </div>
+            <dl id="reservaLivroMetadados" class="reserva-livro-metadados"></dl>
+            <form id="reservaPublicaForm">
+                <fieldset class="reserva-perfil-filtros">
+                    <legend>TIPO DE CADASTRO</legend>
+                    <label><input type="checkbox" id="reservaFiltroFuncionario"> FUNCIONÁRIO</label>
+                    <label><input type="checkbox" id="reservaFiltroVisitante"> VISITANTE</label>
+                    <small id="reservaPerfilAjuda">NENHUMA OPÇÃO MARCADA: A BUSCA É POR ALUNOS.</small>
+                </fieldset>
+                <label for="reservaPessoaBusca">BUSQUE PELO NOME</label>
+                <input type="search" id="reservaPessoaBusca" autocomplete="off" minlength="1" placeholder="DIGITE UMA LETRA OU TRECHO DO NOME">
+                <div id="reservaPessoasResultados" class="reserva-pessoas-resultados" aria-live="polite"></div>
+                <div id="reservaPessoaSelecionada" class="reserva-pessoa-selecionada hidden" aria-live="polite">
+                    <strong>CADASTRO SELECIONADO</strong>
+                    <span id="reservaPessoaSelecionadaTexto"></span>
+                    <small id="reservaPessoaRegra"></small>
+                </div>
+                <p id="reservaPublicaMsg" class="reserva-feedback" role="status" aria-live="polite"></p>
+            <div class="reserva-modal-actions">
+                <button type="button" id="reservaPublicaCancelar" class="btn-block btn-outline">CANCELAR</button>
+                <button type="submit" id="reservaConfirmar" class="btn-block btn-primary" disabled>CONFIRMAR RESERVA</button>
+            </div>
+            </form>
+        </div>
+    </div>
+    <footer class="site-footer" aria-label="Informações do site" style="text-align:left;background:var(--card);border-top:1px solid var(--border);color:var(--text-light);font-size:.7rem;line-height:1.35;padding:.5rem 1rem calc(.5rem + env(safe-area-inset-bottom,0px));">
+    <b>Geladeiroteca Online</b><br>Biblioteca móvel digital para pesquisa do acervo, empréstimos e reservas.<br>
+    Versão: 1.6 · Lançamento 2026 · © 2026 EMTI Maria Vânia ·
+    <span style="white-space:nowrap"><a href="https://www.instagram.com/escmariavania/" target="_blank" rel="me author noopener" class="license-link" style="color:var(--primary);font-weight:700;text-decoration:underline;text-underline-offset:2px;">Instagram do autor</a></span> ·
+    <span style="white-space:nowrap">Licença: <a href="https://creativecommons.org/licenses/by-sa/4.0/deed.pt-br" target="_blank" rel="license noopener" class="license-link" style="color:var(--primary);font-weight:700;text-decoration:underline;text-underline-offset:2px;">CC BY-SA 4.0</a></span>
+</footer>
     <script>
         function fecharLightbox() {
             const lb = document.getElementById('capLightbox');
@@ -778,7 +1302,12 @@
             // Devolver foco ao elemento que abriu o lightbox
             if (lb._opener) { lb._opener.focus(); lb._opener = null; }
         }
-        document.addEventListener('keydown', e => { if (e.key === 'Escape') fecharLightbox(); });
+        document.addEventListener('keydown', e => {
+            if (e.key !== 'Escape') return;
+            const regrasAberto = !document.getElementById('reservaRegrasModal')?.classList.contains('hidden');
+            const reservaAberto = !document.getElementById('reservaPublicaModal')?.classList.contains('hidden');
+            if (!regrasAberto && !reservaAberto) fecharLightbox();
+        });
 
         document.addEventListener('click', e => {
             const wrap = e.target.closest('.book-cover-wrap.has-image');
@@ -796,9 +1325,282 @@
             lb.classList.add('open');
             // Mover foco para o botão fechar — acessibilidade de modal
             setTimeout(() => { const btn = lb.querySelector('.lightbox-back'); if (btn) btn.focus(); }, 50);
-        }, true);
+        }, false);
     </script>
 
 
+
+<div id="navTransicaoOverlay" aria-hidden="true" style="
+    display:none;position:fixed;inset:0;z-index:999998;
+    background:var(--bg,#0f172a);
+    flex-direction:column;align-items:center;justify-content:center;
+    gap:1rem;padding:2rem;text-align:center;
+">
+  <style>
+    @keyframes nav-dot-bounce {
+        0%,80%,100% { transform:scale(0.6); opacity:0.4; }
+        40%          { transform:scale(1);   opacity:1; }
+    }
+    #navTransicaoOverlay .nav-logo { width:80px;height:80px;object-fit:contain; }
+    #navTransicaoOverlay .nav-dots {
+        display:flex;align-items:center;justify-content:center;gap:8px;
+    }
+    #navTransicaoOverlay .nav-dots span {
+        width:10px;height:10px;border-radius:50%;
+        background:var(--primary,#2563eb);
+        display:inline-block;
+        animation:nav-dot-bounce 1.2s infinite ease-in-out both;
+    }
+    #navTransicaoOverlay .nav-dots span:nth-child(1) { animation-delay:-0.32s; }
+    #navTransicaoOverlay .nav-dots span:nth-child(2) { animation-delay:-0.16s; }
+    #navTransicaoOverlay .nav-dots span:nth-child(3) { animation-delay:0s; }
+  </style>
+  <img class="nav-logo" src="logo.png" alt="Geladeiroteca Online">
+  <div class="nav-dots"><span></span><span></span><span></span></div>
+</div>
+<script>
+(function(){
+    function _esconderOverlays() {
+        var ids = ['navTransicaoOverlay'];
+        ids.forEach(function(id) {
+            var el = document.getElementById(id);
+            if (el) { el.style.display = 'none'; el.setAttribute('aria-hidden', 'true'); }
+        });
+    }
+    window.navegarComTransicao = function(url, logo) {
+        var overlay = document.getElementById('navTransicaoOverlay');
+        if (!overlay) { window.location.href = url; return; }
+        if (logo) {
+            var img = overlay.querySelector('.nav-logo');
+            if (img) img.src = logo;
+        }
+        overlay.style.display = 'flex';
+        overlay.setAttribute('aria-hidden', 'false');
+        setTimeout(function(){ window.location.href = url; }, 600);
+    };
+    // Antes de o bfcache congelar a página, esconde os overlays
+    window.addEventListener('pagehide', _esconderOverlays);
+    // Caso o navegador restaure do bfcache mesmo assim
+    window.addEventListener('pageshow', function(e) {
+        if (e.persisted) _esconderOverlays();
+    });
+    // Elevar navegarCom para usar transição após DOM pronto
+    document.addEventListener('DOMContentLoaded', function() {
+        if (window.navegarComTransicao) window.navegarCom = window.navegarComTransicao;
+    });
+})();
+</script>
+
+<!-- Overlay de download PDF -->
+<div id="downloadOverlay" role="status" aria-live="polite" aria-label="Gerando PDF" style="display:none;position:fixed;inset:0;z-index:10000;flex-direction:column;align-items:center;justify-content:center;background:rgba(0,0,0,0.7);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);">
+    <div style="background:var(--card);border-radius:16px;padding:2rem 2.5rem;display:flex;flex-direction:column;align-items:center;gap:1rem;box-shadow:0 8px 32px rgba(0,0,0,0.4);min-width:260px;max-width:88vw;">
+        <div style="font-size:1.5rem;line-height:1;">📥</div>
+        <div id="_pdfLabel" style="font-size:0.9rem;font-weight:700;color:var(--text);text-align:center;">GERANDO PDF...</div>
+        <div style="width:100%;background:var(--border);border-radius:999px;height:8px;overflow:hidden;">
+            <div id="_pdfBar" style="height:100%;width:0%;background:var(--primary);border-radius:999px;transition:width 0.25s ease;"></div>
+        </div>
+        <div id="_pdfPct" style="font-size:0.82rem;font-weight:800;color:var(--primary);">0%</div>
+    </div>
+</div>
+
+<script>
+(function(){
+    const _PDFMAKE_URL  = 'https://cdn.jsdelivr.net/npm/pdfmake@0.2.9/build/pdfmake.min.js';
+    const _VFSFONTS_URL = 'https://cdn.jsdelivr.net/npm/pdfmake@0.2.9/build/vfs_fonts.js';
+    let _pdfCarregado = false;
+
+    // ── UI helpers ────────────────────────────────────────────────────────────
+    let _pctAtual = 0;
+    function _setPct(pct, label) {
+        _pctAtual = Math.min(100, Math.max(_pctAtual, Math.round(pct)));
+        const bar   = document.getElementById('_pdfBar');
+        const pctEl = document.getElementById('_pdfPct');
+        const lblEl = document.getElementById('_pdfLabel');
+        if (bar)   bar.style.width   = _pctAtual + '%';
+        if (pctEl) pctEl.textContent = _pctAtual + '%';
+        if (lblEl && label) lblEl.textContent = label;
+    }
+    function _fecharOverlay() {
+        _pctAtual = 0;
+        const overlay = document.getElementById('downloadOverlay');
+        if (overlay) overlay.style.display = 'none';
+        document.body.style.overflow = '';
+    }
+
+    // ── Carregamento de script por <script src> ───────────────────────────────
+    // A CSP desta página só libera scripts de 'self' e cdn.jsdelivr.net, e não libera
+    // XHR/fetch para CDNs nem 'unsafe-eval'. Por isso o pdfmake é carregado por uma tag
+    // <script src> do jsDelivr (versão fixa), sem XHR e sem new Function.
+    function _carregarScriptTag(url) {
+        return new Promise((resolve, reject) => {
+            const s = document.createElement('script');
+            s.src = url;
+            s.async = true;
+            s.onload = () => resolve();
+            s.onerror = () => { s.remove(); reject(new Error('Falha ao carregar ' + url)); };
+            document.head.appendChild(s);
+        });
+    }
+
+    // ── Carrega pdfmake + vfs_fonts ───────────────────────────────────────────
+    // pdfmake.min.js  ≈ 270 KB  → ocupa 0–25% da barra
+    // vfs_fonts.js    ≈ 1.4 MB  → ocupa 25–40% da barra
+    // Sem progresso de bytes (tags <script> não informam): a barra avança ao concluir cada arquivo.
+    function _carregarPdfMake(onPct) {
+        if (_pdfCarregado || window.pdfMake) { _pdfCarregado = true; onPct(40); return Promise.resolve(); }
+        onPct(5);
+        return _carregarScriptTag(_PDFMAKE_URL)
+            .then(() => { onPct(25); return _carregarScriptTag(_VFSFONTS_URL); })
+            .then(() => { _pdfCarregado = true; onPct(40); });
+    }
+
+    // ── Monta as linhas da tabela em chunks para progresso real ───────────────
+    // Cada chunk libera o event loop (setTimeout 0) para que o progresso seja
+    // renderizado pelo navegador entre os lotes.
+    function _montarLinhasChunks(livros, onPct) {
+        return new Promise((resolve) => {
+            const cabecalho = ['ID','TÍTULO','AUTOR','ISBN','CLASSIFICAÇÃO INDICATIVA','QTD','CADASTRO'];
+            const total = livros.length;
+            const CHUNK = Math.max(1, Math.ceil(total / 20)); // ≈20 fatias
+            const linhas = [];
+            let i = 0;
+            // 55–85%: montagem de linhas
+            const _P_INI = 55, _P_FIM = 85;
+            function _processar() {
+                const fim = Math.min(i + CHUNK, total);
+                while (i < fim) {
+                    const l = livros[i];
+                    linhas.push([
+                        String(l.id||''), l.titulo||'', l.autor||'', l.isbn||'',
+                        l.categoria||'',
+                        String(l.quantidade_total??''),
+                        l.data_cadastro ? new Date(l.data_cadastro).toLocaleDateString('pt-BR') : '',
+                    ]);
+                    i++;
+                }
+                onPct(_P_INI + (_P_FIM - _P_INI) * (i / total));
+                if (i < total) { setTimeout(_processar, 0); }
+                else { resolve({ cabecalho, linhas }); }
+            }
+            setTimeout(_processar, 0);
+        });
+    }
+
+    // ── Função principal ──────────────────────────────────────────────────────
+    window.baixarAcervoPdf = async function() {
+        const livros = (window._livrosOrdenados || window.todosLivros || []);
+        if (!livros.length) { alert('Acervo ainda não carregado. Aguarde e tente novamente.'); return; }
+
+        _pctAtual = 0;
+        const overlay = document.getElementById('downloadOverlay');
+        overlay.style.display = 'flex';
+        document.body.style.overflow = 'hidden';
+        _setPct(0, 'BAIXANDO GERADOR...');
+
+        // ── Etapa 1: carregar pdfmake (0–40%) ────────────────────────────────
+        try {
+            await _carregarPdfMake((p) => _setPct(p, p < 25 ? 'BAIXANDO GERADOR...' : 'BAIXANDO FONTES...'));
+        } catch(e) {
+            console.error('Falha ao carregar o pdfmake:', e);
+            _fecharOverlay();
+            alert('Não foi possível carregar o gerador de PDF. Verifique sua conexão e tente novamente.');
+            return;
+        }
+
+        _setPct(40, 'CARREGANDO LOGO...');
+
+        // ── Etapa 2: carregar logo (40–55%) ───────────────────────────────────
+        const logoDataUrl = await new Promise((resolve) => {
+            try {
+                const img = new Image(); img.crossOrigin = 'anonymous';
+                img.onload = function() {
+                    try {
+                        const c = document.createElement('canvas');
+                        c.width = img.naturalWidth; c.height = img.naturalHeight;
+                        c.getContext('2d').drawImage(img, 0, 0);
+                        _setPct(55);
+                        resolve(c.toDataURL('image/png'));
+                    } catch(_) { _setPct(55); resolve(null); }
+                };
+                img.onerror = () => { _setPct(55); resolve(null); };
+                img.src = 'logo.png?' + Date.now();
+            } catch(_) { _setPct(55); resolve(null); }
+        });
+
+        _setPct(55, 'MONTANDO TABELA...');
+
+        // ── Etapa 3: montar linhas em chunks (55–85%) ─────────────────────────
+        const { cabecalho, linhas } = await _montarLinhasChunks(livros, (p) => _setPct(p, 'MONTANDO TABELA...'));
+
+        _setPct(85, 'COMPILANDO PDF...');
+
+        // ── Etapa 4: gerar PDF e fazer download (85–100%) ─────────────────────
+        // Lê as duas linhas do nome da escola a partir dos <span> do #nomeEscolaExibicao.
+        // Fallback: lê as meta tags nomeesc1/nomeesc2 (presente nas bibliotecas geradas pelo BibMaker).
+        // Último fallback: usa o innerText completo sem quebra.
+        const _escEl = document.getElementById('nomeEscolaExibicao');
+        const _spans = _escEl ? Array.from(_escEl.querySelectorAll('span')).map(s => s.textContent.trim()).filter(Boolean) : [];
+        const _m1 = document.querySelector('meta[name="nomeesc1"]')?.getAttribute('content')?.trim() || '';
+        const _m2 = document.querySelector('meta[name="nomeesc2"]')?.getAttribute('content')?.trim() || '';
+        const _nomeProjeto = (document.querySelector('meta[name="nomeprojeto"]')?.getAttribute('content')?.trim() || 'Geladeiroteca Online').toUpperCase();
+        const _linha1Esc = _spans[0] || _m1 || (_escEl?.innerText?.split('\n')[0]?.trim()) || 'Biblioteca Escolar';
+        const _linha2Esc = _spans[1] || _m2 || (_escEl?.innerText?.split('\n')[1]?.trim()) || '';
+        const agora = new Date().toLocaleDateString('pt-BR') + ' ' + new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
+        // og:url é substituído pelo BibMaker com a URL real do deploy — fonte mais confiável.
+        // Fallback: window.location.href (funciona no deploy real, mas pode ser URL local em visualizadores offline).
+        const _ogUrl = document.querySelector('meta[property="og:url"]')?.getAttribute('content')?.trim() || '';
+        const _isBase = _ogUrl === 'https://limaoruan.github.io/bibvania/' || _ogUrl === 'https://limaoruan.github.io/bibvania/index.html';
+        const linkIndex = (_ogUrl && !_isBase) ? _ogUrl : (_ogUrl || window.location.href.split('?')[0]);
+
+        const infoStack = [
+            {text:_nomeProjeto, fontSize:10, bold:true, color:'#2563eb', alignment:'center', margin:[0,0,0,2]},
+            {text:_linha1Esc,   fontSize:8,  bold:true, color:'#1e293b', alignment:'center', margin:[0,0,0,0]},
+            ...(_linha2Esc ? [{text:_linha2Esc, fontSize:8, bold:true, color:'#1e293b', alignment:'center', margin:[0,0,0,4]}] : []),
+            {text:[{text:String(livros.length)+' título(s)', fontSize:9, bold:true, color:'#2563eb'},{text:'  ·  '+agora, fontSize:7, color:'#64748b'}], alignment:'center', margin:[0,0,0,2]},
+            {text:linkIndex, fontSize:6, color:'#2563eb', decoration:'underline', link:linkIndex, alignment:'center'},
+        ];
+        const headerContent = logoDataUrl
+            ? [{stack:[{image:logoDataUrl,width:48,alignment:'center',margin:[0,0,0,6]},...infoStack],margin:[20,10,20,8]}]
+            : [{stack:infoStack,margin:[20,10,20,8]}];
+
+        try {
+            pdfMake.createPdf({
+                pageSize:'A4', pageOrientation:'landscape', pageMargins:[40,40,40,40],
+                footer:(page,pages)=>({text:'Página '+page+' de '+pages+'  |  Geladeiroteca Online',fontSize:6,color:'#94a3b8',alignment:'center',margin:[0,0,0,10]}),
+                content:[...headerContent,{text:' ',fontSize:4},{
+                    table:{headerRows:1,widths:[28,'*','*',72,95,30,52],
+                        body:[
+                            cabecalho.map(h=>({text:h,fontSize:6,bold:true,fillColor:'#2563eb',color:'#ffffff'})),
+                            ...linhas.map((row,i)=>row.map(cell=>{
+                                const base={fontSize:6,color:'#1e293b',fillColor:i%2===0?'#f8fafc':'#ffffff'};
+                                return (typeof cell==='object'&&cell!==null)?{...base,...cell}:{...base,text:cell};
+                            }))
+                        ]},
+                    layout:{hLineWidth:()=>0.3,vLineWidth:()=>0.3,hLineColor:()=>'#e2e8f0',vLineColor:()=>'#e2e8f0',paddingLeft:()=>3,paddingRight:()=>3,paddingTop:()=>2,paddingBottom:()=>2}
+                }]
+            }).getBlob(function(blob) {
+                _setPct(98, 'PREPARANDO DOWNLOAD...');
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url; a.download = 'acervo-bibvania-' + agora.replace(/[/:, ]/g,'-') + '.pdf';
+                document.body.appendChild(a); a.click();
+                setTimeout(()=>{ document.body.removeChild(a); URL.revokeObjectURL(url); _setPct(100, 'CONCLUÍDO!'); setTimeout(_fecharOverlay, 600); }, 300);
+            }, function(err) {
+                _fecharOverlay();
+                alert('Não foi possível gerar o PDF: ' + (err && err.message ? err.message : 'Erro interno. Tente novamente.'));
+            });
+        } catch(e) {
+            _fecharOverlay();
+            alert('Não foi possível gerar o PDF: ' + (e && e.message ? e.message : 'Erro interno. Tente novamente.'));
+        }
+    };
+})();
+</script>
+
+<script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', function(){ navigator.serviceWorker.register('service-worker.js').catch(function(){}); });
+        }
+    </script>
 </body>
 </html>

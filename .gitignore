@@ -1,0 +1,6 @@
+# Segredos e arquivos locais — nunca publicar
+setup_private.sql
+bibconfig.claude
+*.env
+*.env.*
+!*.env.example
