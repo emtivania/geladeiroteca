@@ -1,0 +1,32 @@
+# Evita a pausa por inatividade no plano gratuito do Supabase.
+# Faz uma consulta pública leve duas vezes por semana.
+name: Manter Supabase ativo
+
+on:
+  schedule:
+    - cron: '17 9 * * 1,4'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Baixar configuração pública
+        uses: actions/checkout@v4
+
+      - name: Consulta pública de teste
+        shell: bash
+        run: |
+          set -euo pipefail
+          URL=$(sed -n "s/^[[:space:]]*SUPABASE_URL:[[:space:]]*'\([^']*\)'.*/\1/p" bibconfig.js | head -n 1)
+          CHAVE=$(sed -n "s/^[[:space:]]*SUPABASE_PUBLISHABLE_KEY:[[:space:]]*'\([^']*\)'.*/\1/p" bibconfig.js | head -n 1)
+          test -n "$URL" && test -n "$CHAVE"
+          curl --fail --silent --show-error --retry 3 --max-time 20 \
+            "$URL/rest/v1/livros?select=id&limit=1" \
+            -H "apikey: $CHAVE" \
+            -H "Authorization: Bearer $CHAVE" \
+            -o /dev/null
