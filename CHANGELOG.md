@@ -21,6 +21,10 @@ Descrição: Descrição detalhada da mudança.
 
 ---
 
+#2 15/10/2026 09:02:57
+Correção no arquivo `admin.html`
+Descrição: Corrigido o erro que impedia a aba "Lista de Pessoas" de mostrar os cards/nomes. A função `_eh()` (escape de HTML) era chamada em `renderListaPessoas` (módulo ES) e nos scripts UMD, mas só estava definida dentro de uma IIFE da aba de empréstimo (`const _eh = ...`), então nesses outros escopos ela não existia e a renderização falhava. A correção foi adicionar, logo abaixo da linha `window.escapeHtml = escapeHtml;` (no `<script type="module">`, perto do início do script), a linha `window._eh = escapeHtml; // usado por renderListaPessoas (ES) e pelos scripts UMD`, tornando `_eh` global. A definição local `const _eh` dentro da IIFE foi mantida. Em termos simples: a lista de pessoas cadastradas voltou a aparecer na tela do administrador.
+
 #1 14/10/2026 10:54:00
 Adição no arquivo `VERSION.json`
 Descrição: Versão do projeto definida como 1.6. Em termos simples: a biblioteca foi criada na versão 1.6.

@@ -1349,6 +1349,7 @@ html.admin-login-locked, body.admin-login-locked { overflow: hidden !important; 
         window.spanCategoria = spanCategoria;
         window.fmtAutor = fmtAutor;
         window.escapeHtml = escapeHtml;
+        window._eh = escapeHtml; // usado por renderListaPessoas (ES) e pelos scripts UMD
         window.fmtVolumeEdicao = fmtVolumeEdicao;
         window.iniciarBuscaVoz = iniciarBuscaVoz; // expor para UMD
         if (window._pendingVozAdmin) { window._pendingVozAdmin(); window._pendingVozAdmin = null; }

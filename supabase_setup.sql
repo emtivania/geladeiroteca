@@ -34,7 +34,8 @@
 --
 -- SEGURANÇA (RLS)
 --   • livros: leitura pública; escrita autenticada
---   • emprestimos, pessoas, reservas: leitura e escrita só autenticado
+--   • pessoas: leitura e escrita para qualquer usuário autenticado (logado)
+--   • emprestimos, reservas: leitura e escrita somente administradores
 --   • funções públicas de reserva expõem somente perfil mínimo e operações validadas
 --   • admins: leitura e escrita apenas pelo próprio usuário autenticado
 --   • config_privada: somente administradores leem
@@ -961,7 +962,7 @@ CREATE POLICY "Exclusão autenticada de livros" ON public.livros
     FOR DELETE TO authenticated
     USING (EXISTS (SELECT 1 FROM public.admins a WHERE a.id = (select auth.uid())));
 
--- Dados de circulação e pessoas não ficam disponíveis a qualquer conta Auth.
+-- Dados de circulação não ficam disponíveis a qualquer conta Auth (pessoas é exceção, abaixo).
 DROP POLICY IF EXISTS "Leitura autenticada de emprestimos" ON public.emprestimos;
 DROP POLICY IF EXISTS "Inserção autenticada de emprestimos" ON public.emprestimos;
 DROP POLICY IF EXISTS "Atualização autenticada de emprestimos" ON public.emprestimos;
@@ -980,23 +981,27 @@ CREATE POLICY "Exclusão autenticada de emprestimos" ON public.emprestimos
     FOR DELETE TO authenticated
     USING (EXISTS (SELECT 1 FROM public.admins a WHERE a.id = (select auth.uid())));
 
+-- pessoas: qualquer usuário autenticado (logado) pode listar e gerenciar;
+-- não exige linha em admins. O papel anon continua sem acesso direto.
+DROP POLICY IF EXISTS "Leitura pública de pessoas" ON public.pessoas;
+DROP POLICY IF EXISTS "Escrita autenticada de pessoas" ON public.pessoas;
 DROP POLICY IF EXISTS "Leitura autenticada de pessoas" ON public.pessoas;
 DROP POLICY IF EXISTS "Inserção autenticada de pessoas" ON public.pessoas;
 DROP POLICY IF EXISTS "Atualização autenticada de pessoas" ON public.pessoas;
 DROP POLICY IF EXISTS "Exclusão autenticada de pessoas" ON public.pessoas;
 CREATE POLICY "Leitura autenticada de pessoas" ON public.pessoas
     FOR SELECT TO authenticated
-    USING (EXISTS (SELECT 1 FROM public.admins a WHERE a.id = (select auth.uid())));
+    USING ((select auth.uid()) IS NOT NULL);
 CREATE POLICY "Inserção autenticada de pessoas" ON public.pessoas
     FOR INSERT TO authenticated
-    WITH CHECK (EXISTS (SELECT 1 FROM public.admins a WHERE a.id = (select auth.uid())));
+    WITH CHECK ((select auth.uid()) IS NOT NULL);
 CREATE POLICY "Atualização autenticada de pessoas" ON public.pessoas
     FOR UPDATE TO authenticated
-    USING (EXISTS (SELECT 1 FROM public.admins a WHERE a.id = (select auth.uid())))
-    WITH CHECK (EXISTS (SELECT 1 FROM public.admins a WHERE a.id = (select auth.uid())));
+    USING ((select auth.uid()) IS NOT NULL)
+    WITH CHECK ((select auth.uid()) IS NOT NULL);
 CREATE POLICY "Exclusão autenticada de pessoas" ON public.pessoas
     FOR DELETE TO authenticated
-    USING (EXISTS (SELECT 1 FROM public.admins a WHERE a.id = (select auth.uid())));
+    USING ((select auth.uid()) IS NOT NULL);
 
 DROP POLICY IF EXISTS "Leitura autenticada de livros_excluidos" ON public.livros_excluidos;
 DROP POLICY IF EXISTS "Inserção autenticada de livros_excluidos" ON public.livros_excluidos;
