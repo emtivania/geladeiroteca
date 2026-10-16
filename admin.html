@@ -1524,24 +1524,22 @@ html.admin-login-locked, body.admin-login-locked { overflow: hidden !important; 
 
 
         // ── PERFIL DO ADMIN (principal ou secundário) ──────────────────────────
-        let _adminPerfil = null; // { id, nome, foto_url, email } — nome null = admin principal sem linha em admins
+        let _adminPerfil = null; // { id, nome, foto_url, email } — vem do user_metadata do Supabase Auth; nome null = sem nome definido
 
-        // Carrega os dados do perfil do usuário logado (nome, foto) a partir do Supabase.
+        // Carrega os dados do perfil do usuário logado (nome, foto) a partir do user_metadata do Supabase Auth.
         async function _carregarAdminPerfil() {
             try {
                 const sb = window.DB.supabase;
                 const { data: { user } } = await sb.auth.getUser();
                 if (!user) return;
 
-                const { data } = await sb
-                    .from('admins')
-                    .select('nome, foto_url')
-                    .eq('id', user.id)
-                    .maybeSingle();
+                const meta = user.user_metadata || {};
+                const nome = (typeof meta.nome === 'string' && meta.nome.trim()) ? meta.nome.trim() : null;
+                const fotoUrl = (typeof meta.foto_url === 'string') ? meta.foto_url : '';
 
-                _adminPerfil = { id: user.id, nome: data ? data.nome : null, foto_url: (data && data.foto_url) || '', email: user.email };
-                if (data && data.nome) {
-                    localStorage.setItem('bibvania_admin_nome', data.nome);
+                _adminPerfil = { id: user.id, nome: nome, foto_url: fotoUrl, email: user.email };
+                if (nome) {
+                    localStorage.setItem('bibvania_admin_nome', nome);
                     localStorage.removeItem('bibvania_admin_semnome');
                 } else {
                     localStorage.removeItem('bibvania_admin_nome');
@@ -1610,7 +1608,7 @@ html.admin-login-locked, body.admin-login-locked { overflow: hidden !important; 
             if (!confirm('Remover foto de perfil?')) return;
             try {
                 const sb = window.DB.supabase;
-                const { error } = await sb.from('admins').update({ foto_url: '' }).eq('id', _adminPerfil.id);
+                const { error } = await sb.auth.updateUser({ data: { foto_url: '' } });
                 if (error) throw new Error(error.message);
                 _adminPerfil.foto_url = '';
                 // Atualiza UI
@@ -1718,18 +1716,13 @@ html.admin-login-locked, body.admin-login-locked { overflow: hidden !important; 
                 const url = json.data?.image?.url || json.data?.url || json.data?.display_url;
                 if (!url) throw new Error('ImgBB retornou URL inválida');
 
-                // Salva URL na tabela admins — upsert porque o admin principal ainda pode não ter linha
+                // Salva a URL no user_metadata do usuário logado (não há tabela admins)
                 const sb = window.DB.supabase;
-                const nomeAtual = _adminPerfil.nome || 'ADMIN'; // nome é NOT NULL; sem nome próprio, usa o fallback
-                const { error } = await sb.from('admins').upsert({ id: _adminPerfil.id, nome: nomeAtual, foto_url: url });
+                const { error } = await sb.auth.updateUser({ data: { foto_url: url } });
                 if (error) throw new Error(error.message);
 
                 // Atualiza local
                 _adminPerfil.foto_url = url;
-                if (!_adminPerfil.nome) {
-                    _adminPerfil.nome = nomeAtual;
-                    _aplicarUIPerfil();
-                }
 
                 // Atualiza UI do modal
                 const img = document.getElementById('perfilFotoImg');
@@ -1876,10 +1869,9 @@ html.admin-login-locked, body.admin-login-locked { overflow: hidden !important; 
                 return;
             }
             try {
-                const userId = loginData?.user?.id;
-                if (userId) {
-                    const { data } = await DB.supabase.from('admins').select('nome').eq('id', userId).maybeSingle();
-                    if (data?.nome) localStorage.setItem('bibvania_admin_nome', data.nome);
+                const nomeMeta = loginData?.user?.user_metadata?.nome;
+                if (typeof nomeMeta === 'string' && nomeMeta.trim()) {
+                    localStorage.setItem('bibvania_admin_nome', nomeMeta.trim());
                 }
                 if (erro) erro.textContent = '';
                 await init();
@@ -4576,11 +4568,11 @@ Responda APENAS com um JSON válido, sem markdown nem texto extra, neste formato
 
 Regras dos campos:
 - "titulo": transcreva o título como aparece na capa, em maiúsculas e preservando os acentos. Leia com cuidado fontes estilizadas, letras decorativas e ligaturas; confira letras ambíguas com o verso e outras inscrições legíveis, se disponíveis. Não adivinhe nem complete trechos ilegíveis pelo contexto. Se o título não puder ser identificado com segurança, use string vazia.
-- "autor": registre APENAS UM nome, em maiúsculas: o autor principal quando estiver claramente indicado; se houver vários autores sem destaque, escolha somente o primeiro listado. Não junte coautores nem outros créditos no campo. Se não houver autor visível ou for obra coletiva/anônima, use "autor_identificado": false e deixe "autor" vazio.
+- "autor": registre APENAS UM nome, em maiúsculas, seguindo esta ordem de preferência: (1) o autor principal (pessoa) quando estiver claramente indicado; se houver vários autores sem destaque, escolha somente o primeiro listado; (2) se não houver autor pessoa (obra coletiva, institucional ou sem autoria individual), a editora impressa na capa ou no verso, escrita como aparece (ex.: "EDITORA MODERNA", "COMPANHIA DAS LETRAS"); (3) se também não houver editora visível, o órgão ou instituição responsável pela obra, quando estiver impresso na capa ou no verso (ex.: "MINISTÉRIO DA SAÚDE", "SECRETARIA DE EDUCAÇÃO DO CEARÁ"). Não junte coautores nem outros créditos, e não acrescente cidade, CNPJ, selo ou slogan. Somente se não houver nenhum desses (pessoa, editora ou órgão) visível, use "autor_identificado": false e deixe "autor" vazio.
 - "isbn": preencha somente se o ISBN estiver impresso e legível na capa ou no verso; caso contrário, string vazia.
 - "volume": número inteiro somente se impresso na capa ou no verso (ex.: "VOLUME 2", "VOL. 2", "TOMO II" → 2); caso contrário, null.
 - "edicao": número inteiro somente se impresso na capa ou no verso (ex.: "3ª EDIÇÃO", "2ª ED." → 2); caso contrário, null.
-- "descricao_capa": UMA frase completa, com alvo de 80 a 110 caracteres e limite absoluto de 125 (espaços e pontuação contam). Escreva já curta: antes de responder, conte os caracteres e, se passar de 110, reescreva mais curta, cortando detalhes, e nunca termine no meio da frase. Ordem de prioridade: (1) título e o único autor identificado — se não houver, escreva "autor não identificado"; (2) um ou dois elementos visuais concretos, como figura, objeto ou cor; (3) o tom ou a atmosfera, somente se sobrar espaço. Não escreva "Capa de" e, com título longo, mantenha só o essencial. Seja objetiva, não invente detalhes e não use a descrição como prova da classificação etária. Exemplos de tamanho (não copie): (85 caracteres) Dom Casmurro, de Machado de Assis: silhueta de homem em sépia, com tom introspectivo. (87 caracteres) O Pequeno Príncipe, de Saint-Exupéry: menino de cachecol dourado sobre um planeta azul.
+- "descricao_capa": UMA frase completa, com alvo de 80 a 110 caracteres e limite absoluto de 125 (espaços e pontuação contam). Escreva já curta: antes de responder, conte os caracteres e, se passar de 110, reescreva mais curta, cortando detalhes, e nunca termine no meio da frase. Ordem de prioridade: (1) título e o nome registrado no campo "autor" (pessoa, editora ou órgão) — se esse campo ficar vazio, escreva "autor não identificado"; (2) um ou dois elementos visuais concretos, como figura, objeto ou cor; (3) o tom ou a atmosfera, somente se sobrar espaço. Não escreva "Capa de" e, com título longo, mantenha só o essencial. Seja objetiva, não invente detalhes e não use a descrição como prova da classificação etária. Exemplos de tamanho (não copie): (85 caracteres) Dom Casmurro, de Machado de Assis: silhueta de homem em sépia, com tom introspectivo. (87 caracteres) O Pequeno Príncipe, de Saint-Exupéry: menino de cachecol dourado sobre um planeta azul.
 - "categoria": escolha exatamente uma destas opções: LIVRE, 6 ANOS, 10 ANOS, 12 ANOS, 14 ANOS, 16 ANOS, 18 ANOS; se as informações visíveis não permitirem avaliar o conteúdo com segurança, use string vazia.
 
 CLASSIND — INDICAÇÕES E PRINCIPAIS CRITÉRIOS

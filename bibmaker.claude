@@ -559,10 +559,16 @@ entrevista.
 **2. Criar o usuário bibliotecário**
 - No Supabase, vá em Authentication → Users → Add user → Create
   new user, informe e-mail e senha e clique em Create User
-- Para definir um username (exibido na Área do Bibliotecário),
-  execute no SQL Editor:
-  `INSERT INTO admins (id, nome) VALUES ('uuid-do-usuario', 'Nome do Admin');`
-  substituindo o UUID pelo valor exibido na lista de usuários
+- Quem está logado já é administrador (não há tabela de admins).
+  Opcionalmente, para definir o nome exibido na Área do
+  Bibliotecário, execute no SQL Editor (por e-mail, sem UUID):
+  `UPDATE auth.users SET raw_user_meta_data = coalesce(raw_user_meta_data, '{}'::jsonb) || jsonb_build_object('nome', 'Nome exibido no painel') WHERE email = 'EMAIL_DO_USUARIO';`
+  e confirme com:
+  `SELECT email, raw_user_meta_data->>'nome' AS nome FROM auth.users WHERE email = 'EMAIL_DO_USUARIO';`
+- Sem nome definido, o painel mostra "OLÁ, ADMIN!"
+- O cadastro público de usuários deve ficar desativado no Supabase
+  (Authentication → Sign In / Providers → "Allow new users to
+  sign up" desligado)
 
 **3. Publicar no GitHub Pages**
 - Suba o conteúdo da pasta do projeto (a que está dentro do `.zip`

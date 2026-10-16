@@ -176,7 +176,7 @@ O **bibmaker.claude** gera automaticamente uma instância personalizada do BibV�
 6. **Informe o repositório GitHub.** URL do repositório e da página GitHub Pages onde o sistema será publicado.
 7. **Aguarde a aplicação das edições.** O Claude confirma um resumo com você e então edita os arquivos-base diretamente, gerando também `setup_private.sql` e `bibconfig.claude` (configuração salva, para facilitar futuras atualizações) com suas chaves.
 8. **Configure o Supabase.** No painel do Supabase, acesse *SQL Editor → New query*, cole o conteúdo de `supabase_setup.sql` e execute. O script inclui a criação das tabelas, políticas, índices e RPCs de reservas. Faça o mesmo com o `setup_private.sql`. Lembre-se de nunca enviar o `setup_private.sql` ao GitHub nem compartilhá-lo de nenhuma forma — ele contém suas chaves privadas de API.
-9. **Crie o usuário bibliotecário.** No Supabase, vá em *Authentication → Users → Add user → Create new user*, informe e-mail e senha e clique em **Create User**. Para definir um username (exibido na Área do Bibliotecário), execute no SQL Editor: `INSERT INTO admins (id, nome) VALUES ('uuid-do-usuario', 'Nome do Admin');` — substituindo o UUID pelo valor exibido na lista de usuários do Supabase.
+9. **Crie o usuário bibliotecário.** No Supabase, vá em *Authentication → Users → Add user → Create new user*, informe e-mail e senha e clique em **Create User**. Quem está logado já é administrador — não há tabela de admins. Opcionalmente, para definir o nome exibido na Área do Bibliotecário, execute no SQL Editor (substituindo o e-mail e o nome): `UPDATE auth.users SET raw_user_meta_data = coalesce(raw_user_meta_data, '{}'::jsonb) || jsonb_build_object('nome', 'Nome exibido no painel') WHERE email = 'EMAIL_DO_USUARIO';` e confirme com `SELECT email, raw_user_meta_data->>'nome' AS nome FROM auth.users WHERE email = 'EMAIL_DO_USUARIO';`. Sem nome, o painel mostra "OLÁ, ADMIN!".
 10. **Publique no GitHub Pages.** Suba o conteúdo da pasta do projeto (dentro do `.zip` entregue — o `setup_private.sql` fica fora dela, na raiz do `.zip`) em um repositório público. Em *Settings → Pages → Source*, escolha o branch `main` e pasta `/ (root)`.
 
 > **Proteção adicional do Auth (plano Pro ou superior):** nas configurações do Auth do Supabase, procure a opção **Prevent the use of leaked passwords** (também descrita como *Leaked password protection*) e ative-a. Dependendo da versão do painel, ela pode aparecer em *Authentication → Settings* ou dentro das configurações de senha. Esse recurso não está disponível no plano gratuito; nesse caso, o alerta correspondente do Security Advisor pode permanecer. A opção é administrada pelo painel do Auth e não pelo SQL da aplicação.
@@ -216,7 +216,7 @@ O **bibmaker.claude** gera automaticamente uma instância personalizada do BibV�
 
 ### Mantendo o Supabase sempre ativo
 
-O repositório inclui um único workflow em `.github/workflows/manter-supabase-ativo.yml`. Ele faz uma consulta pública leve ao Supabase duas vezes por semana, usando a URL e a chave `publishable` já públicas no `bibconfig.js`. Não são usadas chaves secretas.
+O repositório inclui um único workflow em `.github/workflows/manter-supabase-ativo.yml`. Ele faz uma consulta pública leve ao Supabase duas vezes por semana (segundas e quintas, 00:00 no horário de Brasília), usando a URL e a chave `publishable` já públicas no `bibconfig.js`. Não são usadas chaves secretas.
 
 Depois de publicar o repositório, o workflow pode ser conferido em **Actions → Manter Supabase ativo**. Também é possível acioná-lo manualmente com **Run workflow**.
 
@@ -374,7 +374,7 @@ Esta seção é voltada para quem deseja entender, modificar ou manter o código
 - *Aba Devoluções — sub-abas:* grade 2×2 com 4 botões — "⚠️ Atrasado", "📅 Devolver Hoje", "✅ Em Aberto" e "🕐 Sem Data Definida" — cada um com a contagem de itens; a busca textual navega automaticamente para a primeira sub-aba com resultado. Empréstimos do mesmo leitor são agrupados em um único acordeão (todos os livros emprestados a ele) com badges de urgência por pessoa, e o botão "DEVOLUÇÕES" do menu principal recebe cor de fundo (vermelho/amarelo/verde/cinza) conforme a urgência mais crítica entre todos os empréstimos ativos.
 - *Seletor de capa (cadastro manual e edição):* em dispositivos móveis abre um bottom-sheet para escolher Câmera ou Galeria; no desktop abre a galeria diretamente. A imagem é redimensionada por canvas para no máximo 1080×1350px (4:5) em JPEG 92% antes do upload ao ImgBB. Antes disso, `_validarArquivoImagem` confere só o essencial: formato JPG, PNG, WebP ou HEIC/HEIF, até 10 MB e imagem legível pelo navegador; não há exigência de dimensão mínima nem de proporção.
 - *Upload ImgBB (`_iaUploadImgbb`):* aceita data URL ou base64 puro, valida tamanho mínimo (100 chars), faz POST para `api.imgbb.com/1/upload` com backoff — até 3 tentativas com espera de 1200ms e 2400ms entre elas (resolve rate limit e instabilidade de rede em dispositivos móveis).
-- *Botão Vânia — análise de capa com IA (`window.abrirVanIA`):* disponível no cadastro novo e no modo EDITAR LIVRO; fica habilitado assim que há uma capa (`window._capaBase64` recém-selecionada ou, na edição, a capa salva `_cadEdit.livro.imagem_url`, via `_vanIACapaAtual()`; o verso segue a mesma regra em `_vanIAVersoAtual()`, respeitando `capaRemovida`/`versoRemovido`). Na edição, como o formulário já vem preenchido, a análise pede confirmação e substitui título, autor, ISBN, classificação, Volume, Edição e descrição da capa (a quantidade não muda); nada é gravado até "EDITAR LIVRO". Envia a imagem (base64 ou URL) para a Mistral AI (`https://api.mistral.ai/v1/chat/completions`, modelo da constante `VANIA_MODELO` = `ministral-14b-2512`, `response_format: json_object`) com um prompt fixo (`VANIA_PROMPT`) pedindo título, autor (com flag `autor_identificado`), ISBN, categoria (uma das 6 fixas) e descrição de acessibilidade da capa. `_vanIAPreencherFormulario()` aplica o resultado sem sobrescrever campos já preenchidos manualmente, usando `_sincAutorNaoId()` quando o autor não é identificado. Após cada chamada (sucesso ou erro), `_vanIAIniciarCooldown()` bloqueia o botão por `VANIA_COOLDOWN_S` (1s) com contagem regressiva no próprio rótulo, evitando estourar os limites de uso da Mistral AI; se a Mistral responder 429 (limite atingido), a pausa sobe para 60s. A chave é lida de `window.BibChaves.obter('mistral')` (tabela `config_privada`, chave `mistral_api_key`); sem ela, o botão exibe erro ao ser clicado.
+- *Botão Vânia — análise de capa com IA (`window.abrirVanIA`):* disponível no cadastro novo e no modo EDITAR LIVRO; fica habilitado assim que há uma capa (`window._capaBase64` recém-selecionada ou, na edição, a capa salva `_cadEdit.livro.imagem_url`, via `_vanIACapaAtual()`; o verso segue a mesma regra em `_vanIAVersoAtual()`, respeitando `capaRemovida`/`versoRemovido`). Na edição, como o formulário já vem preenchido, a análise pede confirmação e substitui título, autor, ISBN, classificação, Volume, Edição e descrição da capa (a quantidade não muda); nada é gravado até "EDITAR LIVRO". Envia a imagem (base64 ou URL) para a Mistral AI (`https://api.mistral.ai/v1/chat/completions`, modelo da constante `VANIA_MODELO` = `ministral-14b-2512`, `response_format: json_object`) com um prompt fixo (`VANIA_PROMPT`) pedindo título, autor (pessoa; se não houver, a editora impressa na capa ou no verso ou, por último, o órgão responsável; a flag `autor_identificado` só vira `false` quando nenhum dos três aparece), ISBN, categoria (uma das 6 fixas) e descrição de acessibilidade da capa. `_vanIAPreencherFormulario()` aplica o resultado sem sobrescrever campos já preenchidos manualmente, usando `_sincAutorNaoId()` quando o autor não é identificado. Após cada chamada (sucesso ou erro), `_vanIAIniciarCooldown()` bloqueia o botão por `VANIA_COOLDOWN_S` (1s) com contagem regressiva no próprio rótulo, evitando estourar os limites de uso da Mistral AI; se a Mistral responder 429 (limite atingido), a pausa sobe para 60s. A chave é lida de `window.BibChaves.obter('mistral')` (tabela `config_privada`, chave `mistral_api_key`); sem ela, o botão exibe erro ao ser clicado.
 - *Validações em `iaCadastrarLivro` / `iaSalvarEdicao`:* categoria é campo obrigatório (erro "⚠️ INFORME A CATEGORIA" se vazio); após salvar, chama `window._atualizarAcervoImediato()` para atualizar o card em memória sem aguardar reload.
 - *Histórico (`_iaCarregarUltimosDoSupabase`):* busca 50 livros por `id DESC`, ordena no cliente por `GREATEST(data_edicao, data_cadastro)`, exibe os 5 primeiros; mescla com `localStorage` (`bibvania_ia_hist2`) para mostrar base64 temporária enquanto URL do ImgBB não carregou; chamado na inicialização da aba, após salvar e após editar.
 - *Ajuste rápido de quantidade (`iaSalvarQuantidadeRapida`):* atualiza apenas `quantidade_total` e `quantidade_disponivel` sem abrir edição completa.
@@ -408,7 +408,7 @@ Folha de estilos global compartilhada por todas as páginas. Define os tokens de
 
 ##### `supabase_setup.sql`
 
-Script SQL completo para criação das tabelas, triggers, RLS, políticas e RPCs. Deve ser executado no SQL Editor do Supabase em um projeto novo; em instalações existentes, reaplique a versão atualizada para ativar reservas, recalcular o estoque das solicitações pendentes e publicar a busca por perfil. No final, o script solicita a recarga do cache de funções do PostgREST. Cria/configura `livros`, `emprestimos`, `pessoas`, `reservas`, `admins`, `config_privada` e `livros_excluidos`. Inclui migração automática de `pessoa_id` em empréstimos existentes e blocos idempotentes de migração de colunas. Não apaga a tabela de reservas ao reaplicar o arquivo.
+Script SQL completo para criação das tabelas, triggers, RLS, políticas e RPCs. Deve ser executado no SQL Editor do Supabase em um projeto novo; em instalações existentes, reaplique a versão atualizada para ativar reservas, recalcular o estoque das solicitações pendentes e publicar a busca por perfil. No final, o script solicita a recarga do cache de funções do PostgREST. Cria/configura `livros`, `emprestimos`, `pessoas`, `reservas`, `config_privada` e `livros_excluidos` (nome e foto do administrador ficam no `user_metadata` do Supabase Auth, sem tabela `admins`). Inclui migração automática de `pessoa_id` em empréstimos existentes e blocos idempotentes de migração de colunas. Não apaga a tabela de reservas ao reaplicar o arquivo.
 
 ##### `setup_private.sql`
 
@@ -466,7 +466,7 @@ Documentação de instalação e uso voltada ao GitHub. Inclui pré-requisitos e
 
 O BibVânia Online utiliza chaves de API para integrar serviços externos (ImgBB e Mistral AI). Siga estas boas práticas:
 
-* No Supabase Auth, desative o cadastro público de novos usuários; crie administradores manualmente e registre-os na tabela `admins`.
+* No Supabase Auth, desative o cadastro público de novos usuários (Authentication → Sign In / Providers → "Allow new users to sign up" desligado) e crie administradores manualmente em Authentication → Users. Quem está logado já é administrador; não há tabela `admins`.
 * Nunca adicione chaves de API diretamente em arquivos HTML ou JS que vão para o repositório público. Use a tabela `config_privada` no Supabase para armazená-las com segurança (conforme o arquivo `setup_private.sql`).
 * Rotacione as chaves periodicamente ou sempre que suspeitar de uso indevido.
 * No painel de cada serviço, configure limites de uso (rate limits) para evitar cobranças inesperadas.
@@ -527,10 +527,17 @@ window.BIBVANIA_CONFIG = {
 
 1. No Supabase, vá em **Authentication → Users**
 2. Clique em **Add user** e informe e-mail e senha
-3. Para adicionar um username ao usuário, execute no **SQL Editor**, substituindo os valores:
+3. Quem está logado já é administrador. Opcionalmente, para definir o nome exibido no painel, execute no **SQL Editor**, substituindo o e-mail e o nome:
 
 ```sql
-INSERT INTO admins (id, nome) VALUES ('uuid-do-usuario', 'Nome do Admin');
+UPDATE auth.users
+SET raw_user_meta_data = coalesce(raw_user_meta_data, '{}'::jsonb)
+    || jsonb_build_object('nome', 'Nome exibido no painel')
+WHERE email = 'EMAIL_DO_USUARIO';
+
+-- Confirmação
+SELECT email, raw_user_meta_data->>'nome' AS nome
+FROM auth.users WHERE email = 'EMAIL_DO_USUARIO';
 ```
 
 ### 6. Publicar no GitHub Pages

@@ -27,18 +27,23 @@
 --   pessoas         — Cadastro de alunos, visitantes e funcionários (nome, sexo,
 --                     tipo, ano_aluno, turma_aluno, pcd, data_cadastro)
 --   reservas        — Solicitações de reserva, status e snapshot da pessoa
---   admins          — Perfil do bibliotecário autenticado (id → auth.users,
---                     nome, foto_url)
 --   config_privada  — Chaves de API (imgbb_api_key, mistral_api_key)
 --                     com RLS: somente usuários autenticados leem
+--   (Perfil do admin: nome e foto ficam no user_metadata do Supabase Auth,
+--    não há tabela admins — veja a seção 11.)
 --
 -- SEGURANÇA (RLS)
---   • livros: leitura pública; escrita autenticada
---   • pessoas: leitura e escrita para qualquer usuário autenticado (logado)
---   • emprestimos, reservas: leitura e escrita somente administradores
+--   • Quem está logado (role authenticated) já é administrador: não há tabela
+--     admins nem verificação adicional.
+--   • livros: leitura pública; escrita somente autenticado
+--   • pessoas, emprestimos, reservas, livros_excluidos: leitura e escrita
+--     somente autenticado
 --   • funções públicas de reserva expõem somente perfil mínimo e operações validadas
---   • admins: leitura e escrita apenas pelo próprio usuário autenticado
---   • config_privada: somente administradores leem
+--   • config_privada: somente autenticados leem
+--   • IMPORTANTE: o cadastro público de usuários DEVE ficar desativado no
+--     Supabase (Authentication → Sign In / Providers → "Allow new users to
+--     sign up" desligado); caso contrário, qualquer pessoa poderia criar uma
+--     conta e se tornar administradora.
 --
 -- TRIGGERS / FUNÇÕES
 --   • recalcular_disponivel(): atualiza quantidade_disponivel após mudanças
@@ -361,43 +366,20 @@ CREATE POLICY "Somente autenticados leem config_privada"
 -- Só você pelo Dashboard do Supabase
 
 -- ============================================================================
--- 11. TABELA DE ADMINS SECUNDÁRIOS
--- Vincula UUID do Supabase Auth ao nome e foto de perfil do admin.
--- Os dados (UUID + nome) são inseridos manualmente no SQL Editor após criar
--- o usuário em Authentication > Users no Dashboard do Supabase.
+-- 11. PERFIL DO ADMIN (NOME E FOTO) — SEM TABELA ADMINS
+-- Não existe tabela de admins: quem está logado já é administrador.
+-- Nome e foto de perfil ficam no user_metadata do Supabase Auth:
+--   • foto_url — gravada pelo próprio painel (supabase.auth.updateUser)
+--   • nome     — opcional; sem nome, o painel mostra "OLÁ, ADMIN!"
+-- Para definir o nome exibido no painel (por e-mail, sem UUID), rode no SQL Editor:
+--   UPDATE auth.users
+--   SET raw_user_meta_data = coalesce(raw_user_meta_data, '{}'::jsonb)
+--       || jsonb_build_object('nome', 'Nome exibido no painel')
+--   WHERE email = 'EMAIL_DO_USUARIO';
+-- Para conferir:
+--   SELECT email, raw_user_meta_data->>'nome' AS nome
+--   FROM auth.users WHERE email = 'EMAIL_DO_USUARIO';
 -- ============================================================================
-
-CREATE TABLE IF NOT EXISTS admins (
-    id UUID REFERENCES auth.users(id) ON DELETE CASCADE PRIMARY KEY,
-    nome TEXT NOT NULL,
-    foto_url TEXT
-);
-
-ALTER TABLE admins ENABLE ROW LEVEL SECURITY;
-
-DROP POLICY IF EXISTS "Admin lê próprio perfil" ON admins;
-CREATE POLICY "Admin lê próprio perfil"
-    ON admins FOR SELECT
-    TO authenticated
-    USING ((select auth.uid()) = id);
-
-DROP POLICY IF EXISTS "Admin atualiza própria foto" ON admins;
-CREATE POLICY "Admin atualiza própria foto"
-    ON admins FOR UPDATE
-    TO authenticated
-    USING ((select auth.uid()) = id)
-    WITH CHECK ((select auth.uid()) = id);
-
--- Necessária para o admin principal (sem linha em admins) criar a própria
--- linha ao enviar a primeira foto de perfil (upsert em admin.html).
-DROP POLICY IF EXISTS "Admin cria próprio perfil" ON admins;
-CREATE POLICY "Admin cria próprio perfil"
-    ON admins FOR INSERT
-    TO authenticated
-    WITH CHECK ((select auth.uid()) = id);
-
--- Para inserir um novo admin secundário após criar o usuário no Auth:
--- INSERT INTO admins (id, nome) VALUES ('uuid-do-usuario', 'Nome do Admin');
 
 -- ============================================================================
 -- 12. PESSOA_ID EM EMPRÉSTIMOS
@@ -841,10 +823,8 @@ DECLARE
     v_emprestimo_id BIGINT;
     v_emprestimos_ativos BIGINT;
 BEGIN
-    IF auth.uid() IS NULL OR NOT EXISTS (
-        SELECT 1 FROM public.admins a WHERE a.id = (select auth.uid())
-    ) THEN
-        RAISE EXCEPTION 'Apenas administradores podem concluir reservas';
+    IF auth.uid() IS NULL THEN
+        RAISE EXCEPTION 'Apenas usuários autenticados podem concluir reservas';
     END IF;
     IF coalesce(p_sem_data, false) = false AND (p_dias IS NULL OR p_dias < 1 OR p_dias > 31) THEN
         RAISE EXCEPTION 'Informe um prazo de 1 a 31 dias';
@@ -941,48 +921,49 @@ END $$;
 
 
 -- ============================================================================
--- 17. RESTRIÇÃO FINAL: OPERAÇÕES ADMINISTRATIVAS SOMENTE PARA ADMINS
--- A autenticação, sozinha, não concede acesso administrativo. O usuário
--- autenticado também precisa possuir uma linha na tabela admins.
--- O cadastro público de usuários deve permanecer desativado no Dashboard.
+-- 17. RESTRIÇÃO FINAL: OPERAÇÕES ADMINISTRATIVAS SOMENTE PARA AUTENTICADOS
+-- Quem está logado já é administrador: basta (select auth.uid()) IS NOT NULL;
+-- não é necessária nenhuma linha em tabela admins. Por isso o cadastro público
+-- de usuários DEVE permanecer desativado no Supabase (Authentication →
+-- Sign In / Providers → "Allow new users to sign up" desligado).
 -- ============================================================================
 
--- Livros continuam públicos para leitura; escrita fica restrita a admins.
+-- Livros continuam públicos para leitura; escrita fica restrita a usuários autenticados.
 DROP POLICY IF EXISTS "Inserção autenticada de livros" ON public.livros;
 DROP POLICY IF EXISTS "Atualização autenticada de livros" ON public.livros;
 DROP POLICY IF EXISTS "Exclusão autenticada de livros" ON public.livros;
 CREATE POLICY "Inserção autenticada de livros" ON public.livros
     FOR INSERT TO authenticated
-    WITH CHECK (EXISTS (SELECT 1 FROM public.admins a WHERE a.id = (select auth.uid())));
+    WITH CHECK ((select auth.uid()) IS NOT NULL);
 CREATE POLICY "Atualização autenticada de livros" ON public.livros
     FOR UPDATE TO authenticated
-    USING (EXISTS (SELECT 1 FROM public.admins a WHERE a.id = (select auth.uid())))
-    WITH CHECK (EXISTS (SELECT 1 FROM public.admins a WHERE a.id = (select auth.uid())));
+    USING ((select auth.uid()) IS NOT NULL)
+    WITH CHECK ((select auth.uid()) IS NOT NULL);
 CREATE POLICY "Exclusão autenticada de livros" ON public.livros
     FOR DELETE TO authenticated
-    USING (EXISTS (SELECT 1 FROM public.admins a WHERE a.id = (select auth.uid())));
+    USING ((select auth.uid()) IS NOT NULL);
 
--- Dados de circulação não ficam disponíveis a qualquer conta Auth (pessoas é exceção, abaixo).
+-- Dados de circulação só ficam disponíveis a usuários autenticados.
 DROP POLICY IF EXISTS "Leitura autenticada de emprestimos" ON public.emprestimos;
 DROP POLICY IF EXISTS "Inserção autenticada de emprestimos" ON public.emprestimos;
 DROP POLICY IF EXISTS "Atualização autenticada de emprestimos" ON public.emprestimos;
 DROP POLICY IF EXISTS "Exclusão autenticada de emprestimos" ON public.emprestimos;
 CREATE POLICY "Leitura autenticada de emprestimos" ON public.emprestimos
     FOR SELECT TO authenticated
-    USING (EXISTS (SELECT 1 FROM public.admins a WHERE a.id = (select auth.uid())));
+    USING ((select auth.uid()) IS NOT NULL);
 CREATE POLICY "Inserção autenticada de emprestimos" ON public.emprestimos
     FOR INSERT TO authenticated
-    WITH CHECK (EXISTS (SELECT 1 FROM public.admins a WHERE a.id = (select auth.uid())));
+    WITH CHECK ((select auth.uid()) IS NOT NULL);
 CREATE POLICY "Atualização autenticada de emprestimos" ON public.emprestimos
     FOR UPDATE TO authenticated
-    USING (EXISTS (SELECT 1 FROM public.admins a WHERE a.id = (select auth.uid())))
-    WITH CHECK (EXISTS (SELECT 1 FROM public.admins a WHERE a.id = (select auth.uid())));
+    USING ((select auth.uid()) IS NOT NULL)
+    WITH CHECK ((select auth.uid()) IS NOT NULL);
 CREATE POLICY "Exclusão autenticada de emprestimos" ON public.emprestimos
     FOR DELETE TO authenticated
-    USING (EXISTS (SELECT 1 FROM public.admins a WHERE a.id = (select auth.uid())));
+    USING ((select auth.uid()) IS NOT NULL);
 
 -- pessoas: qualquer usuário autenticado (logado) pode listar e gerenciar;
--- não exige linha em admins. O papel anon continua sem acesso direto.
+-- O papel anon continua sem acesso direto.
 DROP POLICY IF EXISTS "Leitura pública de pessoas" ON public.pessoas;
 DROP POLICY IF EXISTS "Escrita autenticada de pessoas" ON public.pessoas;
 DROP POLICY IF EXISTS "Leitura autenticada de pessoas" ON public.pessoas;
@@ -1009,40 +990,37 @@ DROP POLICY IF EXISTS "Atualização autenticada de livros_excluidos" ON public.
 DROP POLICY IF EXISTS "Exclusão autenticada de livros_excluidos" ON public.livros_excluidos;
 CREATE POLICY "Leitura autenticada de livros_excluidos" ON public.livros_excluidos
     FOR SELECT TO authenticated
-    USING (EXISTS (SELECT 1 FROM public.admins a WHERE a.id = (select auth.uid())));
+    USING ((select auth.uid()) IS NOT NULL);
 CREATE POLICY "Inserção autenticada de livros_excluidos" ON public.livros_excluidos
     FOR INSERT TO authenticated
-    WITH CHECK (EXISTS (SELECT 1 FROM public.admins a WHERE a.id = (select auth.uid())));
+    WITH CHECK ((select auth.uid()) IS NOT NULL);
 CREATE POLICY "Atualização autenticada de livros_excluidos" ON public.livros_excluidos
     FOR UPDATE TO authenticated
-    USING (EXISTS (SELECT 1 FROM public.admins a WHERE a.id = (select auth.uid())))
-    WITH CHECK (EXISTS (SELECT 1 FROM public.admins a WHERE a.id = (select auth.uid())));
+    USING ((select auth.uid()) IS NOT NULL)
+    WITH CHECK ((select auth.uid()) IS NOT NULL);
 CREATE POLICY "Exclusão autenticada de livros_excluidos" ON public.livros_excluidos
     FOR DELETE TO authenticated
-    USING (EXISTS (SELECT 1 FROM public.admins a WHERE a.id = (select auth.uid())));
+    USING ((select auth.uid()) IS NOT NULL);
 
--- Reservas diretas também ficam limitadas a admins; a criação pública continua
+-- Reservas diretas também ficam limitadas a usuários autenticados; a criação pública continua
 -- ocorrendo somente pela RPC controlada bv_criar_reserva.
 DROP POLICY IF EXISTS "Leitura autenticada de reservas" ON public.reservas;
 DROP POLICY IF EXISTS "Cancelamento autenticado de reservas" ON public.reservas;
 CREATE POLICY "Leitura autenticada de reservas" ON public.reservas
     FOR SELECT TO authenticated
-    USING (EXISTS (SELECT 1 FROM public.admins a WHERE a.id = (select auth.uid())));
+    USING ((select auth.uid()) IS NOT NULL);
 CREATE POLICY "Cancelamento autenticado de reservas" ON public.reservas
     FOR UPDATE TO authenticated
-    USING (EXISTS (SELECT 1 FROM public.admins a WHERE a.id = (select auth.uid())) AND status = 'pendente')
+    USING ((select auth.uid()) IS NOT NULL AND status = 'pendente')
     WITH CHECK (status = 'cancelada');
 
--- Chaves privadas só podem ser lidas por usuários que também são admins.
+-- Chaves privadas só podem ser lidas por usuários autenticados (logados).
+DROP POLICY IF EXISTS "Somente admins leem config_privada" ON public.config_privada;
 DROP POLICY IF EXISTS "Somente autenticados leem config_privada" ON public.config_privada;
-CREATE POLICY "Somente admins leem config_privada"
+CREATE POLICY "Somente autenticados leem config_privada"
     ON public.config_privada FOR SELECT TO authenticated
-    USING (EXISTS (SELECT 1 FROM public.admins a WHERE a.id = (select auth.uid())));
+    USING ((select auth.uid()) IS NOT NULL);
 REVOKE ALL ON TABLE public.config_privada FROM anon;
 GRANT SELECT ON TABLE public.config_privada TO authenticated;
-
--- A criação de perfis admins é feita manualmente no SQL Editor. Não permitir
--- que uma conta autenticada crie a própria linha e se torne administradora.
-DROP POLICY IF EXISTS "Admin cria próprio perfil" ON public.admins;
 
 NOTIFY pgrst, 'reload schema';
