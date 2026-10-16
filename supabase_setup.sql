@@ -371,16 +371,25 @@ CREATE POLICY "Somente autenticados leem config_privada"
 -- Nome e foto de perfil ficam no user_metadata do Supabase Auth:
 --   • foto_url — gravada pelo próprio painel (supabase.auth.updateUser)
 --   • nome     — opcional; sem nome, o painel mostra "OLÁ, ADMIN!"
--- Para definir o nome exibido no painel (por e-mail, sem UUID), rode no SQL Editor:
---   UPDATE auth.users
---   SET raw_user_meta_data = coalesce(raw_user_meta_data, '{}'::jsonb)
---       || jsonb_build_object('nome', 'Nome exibido no painel')
---   WHERE email = 'EMAIL_DO_USUARIO';
--- Para conferir:
---   SELECT email, raw_user_meta_data->>'nome' AS nome
---   FROM auth.users WHERE email = 'EMAIL_DO_USUARIO';
--- ============================================================================
-
+--
+-- USERNAME DO BIBLIOTECÁRIO (por UUID — Authentication → Users → coluna "User UID").
+-- Substitua UUID_DO_USUARIO e rode UMA linha por vez no SQL Editor
+-- (tire o "-- " só da linha desejada):
+--
+-- 1) COLOCAR o username (quando ainda não há nome definido)
+-- UPDATE auth.users SET raw_user_meta_data = coalesce(raw_user_meta_data, '{}'::jsonb) || '{"nome":"Nome"}' WHERE id = 'UUID_DO_USUARIO';
+--
+-- 2) TROCAR o username (quando já há um nome definido)
+-- UPDATE auth.users SET raw_user_meta_data = coalesce(raw_user_meta_data, '{}'::jsonb) || '{"nome":"Novo Nome"}' WHERE id = 'UUID_DO_USUARIO';
+--
+-- 3) EXCLUIR o username (volta a mostrar "OLÁ, ADMIN!"; foto e login não mudam)
+-- UPDATE auth.users SET raw_user_meta_data = raw_user_meta_data - 'nome' WHERE id = 'UUID_DO_USUARIO';
+--
+-- CONFERIR o resultado
+-- SELECT id, email, raw_user_meta_data->>'nome' AS nome FROM auth.users WHERE id = 'UUID_DO_USUARIO';
+--
+-- (Os comandos 1 e 2 são idênticos: criam o nome se não existe e trocam se já existe.
+--  Para usar o e-mail em vez do UUID, troque o filtro por WHERE email = 'EMAIL_DO_USUARIO'.)
 -- ============================================================================
 -- 12. PESSOA_ID EM EMPRÉSTIMOS
 

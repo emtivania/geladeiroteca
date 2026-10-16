@@ -560,11 +560,18 @@ entrevista.
 - No Supabase, vá em Authentication → Users → Add user → Create
   new user, informe e-mail e senha e clique em Create User
 - Quem está logado já é administrador (não há tabela de admins).
-  Opcionalmente, para definir o nome exibido na Área do
-  Bibliotecário, execute no SQL Editor (por e-mail, sem UUID):
-  `UPDATE auth.users SET raw_user_meta_data = coalesce(raw_user_meta_data, '{}'::jsonb) || jsonb_build_object('nome', 'Nome exibido no painel') WHERE email = 'EMAIL_DO_USUARIO';`
-  e confirme com:
-  `SELECT email, raw_user_meta_data->>'nome' AS nome FROM auth.users WHERE email = 'EMAIL_DO_USUARIO';`
+  Opcionalmente, o nome (username) exibido na Área do Bibliotecário
+  é gerenciado no SQL Editor por UUID (Authentication → Users →
+  coluna "User UID"), uma linha por vez, substituindo
+  UUID_DO_USUARIO e o nome:
+  1) Colocar (ainda sem nome):
+  `UPDATE auth.users SET raw_user_meta_data = coalesce(raw_user_meta_data, '{}'::jsonb) || '{"nome":"Nome"}' WHERE id = 'UUID_DO_USUARIO';`
+  2) Trocar (já com nome; mesmo comando, com o novo nome):
+  `UPDATE auth.users SET raw_user_meta_data = coalesce(raw_user_meta_data, '{}'::jsonb) || '{"nome":"Novo Nome"}' WHERE id = 'UUID_DO_USUARIO';`
+  3) Excluir (volta a mostrar "OLÁ, ADMIN!"; foto e login não mudam):
+  `UPDATE auth.users SET raw_user_meta_data = raw_user_meta_data - 'nome' WHERE id = 'UUID_DO_USUARIO';`
+  Conferir:
+  `SELECT id, email, raw_user_meta_data->>'nome' AS nome FROM auth.users WHERE id = 'UUID_DO_USUARIO';`
 - Sem nome definido, o painel mostra "OLÁ, ADMIN!"
 - O cadastro público de usuários deve ficar desativado no Supabase
   (Authentication → Sign In / Providers → "Allow new users to
