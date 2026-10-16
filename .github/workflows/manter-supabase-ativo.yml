@@ -1,10 +1,11 @@
 # Evita a pausa por inatividade no plano gratuito do Supabase.
-# Faz uma consulta pública leve duas vezes por semana.
+# Faz uma consulta pública leve duas vezes por semana (segundas e quintas, 00:00 no horário de Brasília).
 name: Manter Supabase ativo
 
 on:
   schedule:
-    - cron: '17 9 * * 1,4'
+    # 00:00 no horário de Brasília (UTC-3) = 03:00 UTC, às segundas e quintas.
+    - cron: '0 3 * * 1,4'
   workflow_dispatch:
 
 permissions:
@@ -12,11 +13,11 @@ permissions:
 
 jobs:
   ping:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 5
     steps:
       - name: Baixar configuração pública
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Consulta pública de teste
         shell: bash
