@@ -1,5 +1,5 @@
 /* Geladeiroteca Online — PWA shell. Never intercepts Supabase or other origins. */
-const CACHE = 'geladeiroteca-shell-v1';
+const CACHE = 'geladeiroteca-shell-v2';
 const SHELL = [
   './', 'index.html', 'admin.html', 'bibconfig.js', 'bibcore.js', 'style.css',
   'manifest.webmanifest', 'favicon.ico', 'favicon-16.png', 'favicon-32.png',

@@ -22,7 +22,7 @@
  * com chamadas síncronas de outros scripts inline.
  *
  * @author  Ruan Oliveira Lima <https://www.instagram.com/ruanoliveiralima_/>
- * @version 2.0
+ * @version 3.0
  * @year    2026
  * @license CC-BY-SA-4.0 <https://creativecommons.org/licenses/by-sa/4.0/>
  * @source  https://github.com/limaoruan/bibvania

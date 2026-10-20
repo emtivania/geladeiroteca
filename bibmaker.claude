@@ -5,7 +5,7 @@
 
 | | |
 |---|---|
-| **Versão** | 1.9 <!-- = versão da BibVânia Online instalada − 0.1 --> |
+| **Versão** | 2.7 <!-- = versão da BibVânia Online instalada − 0.3 --> |
 | **Descrição** | Gera uma instância personalizada do BibVânia Online a partir dos arquivos-base, pronta para publicar no GitHub Pages |
 | **Repositório** | github.com/limaoruan/bibvania |
 | **Licença** | CC-BY-SA-4.0 |
@@ -126,7 +126,9 @@ formato exigir:
   `meta description` (texto da descrição para compartilhamento ou fallback adaptado);
 - `author`, `creator`, `publisher`, `copyright`, `license-name`,
   `license-version`, `license-url`, `source`, `version`, `year`, `tipobib`,
-  `tipolabel` e `versaobase`;
+  `tipolabel`, `denominacaoescola`, `nomeescola`, `nomebiblioteca` e `versaobase`;
+  os metadados de modalidade e identificação usados pelo rodapé também devem
+  existir no `admin.html` com valores iguais aos do `index.html`;
 - `robots=index, follow`, `googlebot=index, follow`, `referrer`,
   `theme-color`, `color-scheme` e `format-detection` quando compatíveis;
 - `canonical` absoluto, favicon, `apple-touch-icon`, `manifest` e preload
@@ -170,7 +172,59 @@ metadados técnicos completos e coerentes para compartilhamento controlado:
   `isAccessibleForFree`;
 - CSP compatível com os recursos efetivamente usados. Não relaxar a CSP com
   domínios genéricos desnecessários e nunca colocar segredo em metadados.
+  Ao gerar ou ajustar a CSP do `admin.html`, preservar o que a BibVânia-base já
+  usa para a leitura do código de barras (ISBN) de capas e versos: o
+  `connect-src` deve manter `https://*.ibb.co` (download das imagens já salvas
+  no ImgBB, na edição de livros) e o `script-src` deve manter
+  `https://cdn.jsdelivr.net` (supabase-js e `@zxing/library`, ambos com versão
+  fixa). Remover qualquer um deles desativa a leitura local das barras.
 
+### Rodapé das páginas (`index.html` e `admin.html`)
+Em todas as três instâncias do rodapé (`index.html`, tela de login e painel do
+`admin.html`), a linha de descrição deve identificar a biblioteca conforme o
+tipo escolhido na entrevista. Use `<span class="site-footer-description">` e
+atualize-o por JavaScript com `textContent`, preservando o estilo e a posição das
+outras linhas. Os dois HTMLs devem conter os mesmos metadados de identidade:
+`tipobib`, `tipolabel`, `denominacaoescola`, `nomeescola` e `nomebiblioteca`.
+Preencha os campos de identificação correspondentes à modalidade e deixe vazios
+os que não se aplicam. Não use `nomeesc1`/`nomeesc2` para compor a descrição,
+porque eles podem conter rótulos visuais como "BIBLIOTECA ESCOLAR DA".
+
+A frase-base exata é:
+`Sistema de gerenciamento de biblioteca para pesquisa do acervo, empréstimos e reservas`
+- Para `tipobib=escolar`, acrescente ` da `, a Denominação da Escola e o Nome da
+  Escola, nesta ordem, separados por um espaço. Exemplo: `Sistema de gerenciamento
+  de biblioteca para pesquisa do acervo, empréstimos e reservas da EMTI Maria Vânia
+  Farias Linhares`. Mantenha o nome oficial informado na entrevista.
+- Para `tipobib=comunitaria`, acrescente ` da biblioteca comunitária ` e o nome
+  da biblioteca. Se o valor recebido já começar por "Biblioteca Comunitária" ou
+  "Comunitária", retire esse prefixo antes de acrescentá-lo, para evitar repetição.
+  Exemplo: `Sistema de gerenciamento de biblioteca para pesquisa do acervo,
+  empréstimos e reservas da biblioteca comunitária Índia Lucrecia`.
+- Se os campos de identificação não estiverem disponíveis, mantenha somente a
+  frase-base, sem inventar nome. O conteúdo HTML inicial também deve usar a frase
+  já formada para aquela biblioteca como fallback sem JavaScript.
+
+Em uma biblioteca derivada, a linha de atribuição ao projeto de origem deve ficar
+logo abaixo da descrição dinâmica e acima da linha de versão, lançamento e
+licença. O texto é fixo e deve ficar neste formato:
+```html
+<a href="https://github.com/limaoruan/bibvania" target="_blank" rel="noopener" class="license-link" style="color:var(--primary);font-weight:700;text-decoration:underline;text-underline-offset:2px;">Derivado do Projeto BibVânia</a> <a href="https://www.instagram.com/ruanoliveiralima_/" target="_blank" rel="me author noopener" class="license-link" style="color:var(--primary);font-weight:700;text-decoration:underline;text-underline-offset:2px;">© 2026 Ruan Oliveira Lima</a>.<br>
+```
+Regras:
+- "Derivado do Projeto BibVânia" é o hiperlink do repositório do projeto
+  BibVânia (`https://github.com/limaoruan/bibvania`); "© 2026 Ruan Oliveira Lima"
+  é o hiperlink do Instagram do autor do projeto BibVânia
+  (`https://www.instagram.com/ruanoliveiralima_/`). Os dois abrem em nova aba.
+- O ano 2026 é o do projeto BibVânia, não o da biblioteca derivada; não trocar
+  pelo ano, pelo autor ou pelos links informados na entrevista. Os dados da biblioteca
+  derivada continuam na linha de versão, lançamento e licença.
+- Reaproveitar o estilo dos links já existentes no rodapé (classe `license-link`,
+  cor primária, negrito e sublinhado), para funcionar nos modos claro e escuro.
+- Essa linha existe somente nas bibliotecas derivadas; o projeto original
+  BibVânia Online não a tem.
+- Na geração e em toda atualização, conferir os três rodapés: se a linha faltar,
+  adicioná-la; se estiver duplicada ou alterada, consolidar com o texto acima.
 ### Arquivos de descoberta e instalação
 
 - `manifest.webmanifest`: `name`, `short_name`, `description`, `lang`, `dir`,
@@ -196,8 +250,9 @@ referências à BibVânia-base e URLs antigas. Preservar personalizações váli
 existentes que não contradigam os dados confirmados; confirmar qualquer dado
 ambíguo em vez de inventá-lo. Validar ao final: um único `title`, um único
 canonical, JSON-LD parseável, URLs absolutas nos campos sociais/canonical/sitemap,
-`admin.html` fora do sitemap, nenhum `setup_private.sql`/`bibconfig.claude`
-dentro da pasta pública, e o workflow `.github/workflows/manter-supabase-ativo.yml`
+`admin.html` fora do sitemap, CSP do `admin.html` com `https://*.ibb.co` no
+`connect-src` e `https://cdn.jsdelivr.net` no `script-src`, nenhum
+`setup_private.sql`/`bibconfig.claude` dentro da pasta pública, e o workflow `.github/workflows/manter-supabase-ativo.yml`
 presente, válido e apontando para a configuração pública atualizada.
 
 ---
@@ -291,8 +346,8 @@ Ao processar este arquivo, devo:
    e gravar os 64 caracteres hexadecimais com `echo -n`, sem quebra de
    linha. Nunca copiar o `bibhash.sig` da BibVânia Online base
 8. Entregar tudo em um único arquivo `.zip`, nomeado igual à pasta
-   do projeto (ex.: projeto "Biblioteca EMTI João Silva" →
-   `biblioteca-emti-joao-silva.zip`): uma pasta com o nome do
+   do projeto (ex.: projeto "Biblioteca João Silva" →
+   `biblioteca-joao-silva.zip`): uma pasta com o nome do
    projeto contendo todos os arquivos da biblioteca — inclusive o
    `bibmaker.claude`, o `bibmaker-logo.png`, o `CHANGELOG.md` próprio da
    biblioteca e o `bibhash.sig` — (exceto `setup_private.sql` e
@@ -330,12 +385,12 @@ Regras que sigo enquanto pergunto:
 **Exemplo:** `escolar`
 
 <!-- Se escolar -->
-**Tipo de Biblioteca:** <!-- Ex.: Biblioteca Escolar, Biblioteca Móvel -->
+**Denominação da Biblioteca:** <!-- Ex.: Biblioteca Escolar, Biblioteca Móvel -->
 **Exemplo:** `Biblioteca Escolar`
 **Denominação da Escola (sigla):** <!-- Ex.: EMTI -->
 **Exemplo:** `EMTI`
 **Nome da Escola:**
-**Exemplo:** `EMTI Professora Maria Vânia Farias Linhares`
+**Exemplo:** `Professora Maria Vânia Farias Linhares` (sem a sigla EMTI, já informada acima)
 
 <!-- Se comunitaria -->
 **Nome da Biblioteca:**
@@ -391,7 +446,7 @@ aprovado`. Registrar essas dimensões no `bibconfig.claude` e, quando a imagem f
 
 ### 4. Dados do Projeto
 **Nome do Projeto:**
-**Exemplo:** `Biblioteca EMTI Maria Vânia`
+**Exemplo:** `Biblioteca Maria Vânia`
 **Autor do Projeto:**
 **Exemplo:** `Ruan Oliveira Lima`
 **Site do Autor:** <!-- opcional -->
@@ -401,7 +456,7 @@ aprovado`. Registrar essas dimensões no `bibconfig.claude` e, quando a imagem f
 **Versão do Projeto:** <!-- editável, padrão x.y (ex.: 1.0, 2.3) -->
 **Exemplo:** `1.0`
 **Descrição para compartilhamento/Open Graph:** <!-- opcional; se vazio, usar a descrição padrão do BibMaker -->
-**Exemplo:** `Pesquise livros, consulte a disponibilidade e explore o acervo da Biblioteca EMTI Maria Vânia.` — ou deixe vazio
+**Exemplo:** `Pesquise livros, consulte a disponibilidade e explore o acervo da Biblioteca Maria Vânia.` — ou deixe vazio
 
 #### Licença
 **Tipo de Licença:** <!-- com | sem | dominio -->
@@ -504,8 +559,8 @@ Ao final da entrevista:
    linha. Nunca copio o `bibhash.sig` da BibVânia Online base: a
    biblioteca gerada sempre recebe o seu próprio hash
 10. Entrego tudo em um único `.zip`, nomeado igual à pasta do
-   projeto (ex.: projeto "Biblioteca EMTI João Silva" →
-   `biblioteca-emti-joao-silva.zip`): uma pasta com o nome do seu
+   projeto (ex.: projeto "Biblioteca João Silva" →
+   `biblioteca-joao-silva.zip`): uma pasta com o nome do seu
    projeto contendo todos os arquivos da biblioteca — inclusive o
    `bibmaker.claude` e o `bibmaker-logo.png` (você vai precisar deles
    para atualizar a biblioteca no futuro), o `CHANGELOG.md` da
@@ -544,51 +599,84 @@ entrevista.
   nova assim que a atualização terminar, para não ficar com uma
   versão desatualizada guardada.
 
-**Passos para deixar sua biblioteca no ar:**
+**Passos para deixar sua biblioteca no ar — siga nesta ordem:**
 
-**1. Configurar o Supabase**
-- No painel do Supabase, vá em SQL Editor → New query
-- Cole e execute o conteúdo de `supabase_setup.sql`
-- As tabelas já vêm com RLS (Row Level Security) ativado por
-  padrão através desse script — não desative isso no painel
-- Em seguida, execute também o `setup_private.sql` no mesmo
-  SQL Editor (já vem com suas chaves preenchidas)
-- ⚠️ Nunca suba o `setup_private.sql` nem o `bibconfig.claude` ao
-  GitHub, nem os compartilhe — ambos contêm suas chaves privadas
+**1. Configurar o projeto Supabase correto**
+- Entre no painel do Supabase e abra exatamente o projeto cuja URL você
+  forneceu na entrevista do BibMaker.
+- Vá a **SQL Editor → New query**, cole o arquivo completo
+  `supabase_setup.sql` e clique em **Run**. Aguarde a execução terminar
+  e confira se o painel não mostra erro. Esse passo cria as tabelas,
+  políticas RLS, índices, funções e regras de reservas necessárias.
+- Depois, abra uma nova consulta e execute o `setup_private.sql` gerado.
+  Ele grava as chaves privadas do ImgBB e da Mistral AI na tabela privada.
+- No arquivo público `bibconfig.js`, confirme que `SUPABASE_URL` e
+  `SUPABASE_PUBLISHABLE_KEY` apontam para esse mesmo projeto Supabase.
+  Use somente a chave `sb_publishable_` no frontend; nunca coloque
+  chave `secret` ou `service_role` no código publicado.
+- ⚠️ `setup_private.sql` contém chaves privadas. Nunca o publique no
+  GitHub nem o envie dentro da pasta pública do site.
 
-**2. Criar o usuário bibliotecário**
-- No Supabase, vá em Authentication → Users → Add user → Create
-  new user, informe e-mail e senha e clique em Create User
-- Quem está logado já é administrador (não há tabela de admins).
-  Opcionalmente, o nome (username) exibido na Área do Bibliotecário
-  é gerenciado no SQL Editor por UUID (Authentication → Users →
-  coluna "User UID"), uma linha por vez, substituindo
-  UUID_DO_USUARIO e o nome:
-  1) Colocar (ainda sem nome):
-  `UPDATE auth.users SET raw_user_meta_data = coalesce(raw_user_meta_data, '{}'::jsonb) || '{"nome":"Nome"}' WHERE id = 'UUID_DO_USUARIO';`
-  2) Trocar (já com nome; mesmo comando, com o novo nome):
-  `UPDATE auth.users SET raw_user_meta_data = coalesce(raw_user_meta_data, '{}'::jsonb) || '{"nome":"Novo Nome"}' WHERE id = 'UUID_DO_USUARIO';`
-  3) Excluir (volta a mostrar "OLÁ, ADMIN!"; foto e login não mudam):
-  `UPDATE auth.users SET raw_user_meta_data = raw_user_meta_data - 'nome' WHERE id = 'UUID_DO_USUARIO';`
-  Conferir:
-  `SELECT id, email, raw_user_meta_data->>'nome' AS nome FROM auth.users WHERE id = 'UUID_DO_USUARIO';`
-- Sem nome definido, o painel mostra "OLÁ, ADMIN!"
-- O cadastro público de usuários deve ficar desativado no Supabase
-  (Authentication → Sign In / Providers → "Allow new users to
-  sign up" desligado)
+**2. Criar o usuário e cadastrar o nome exibido no painel**
+- No mesmo projeto Supabase, vá a **Authentication → Users → Add user →
+  Create new user**, informe o e-mail e uma senha forte e clique em
+  **Create User**.
+- Na lista de usuários, copie o **User UID** do usuário recém-criado.
+- O username (nome exibido) é opcional: aparece no painel como "OI, nome!" (só o primeiro nome) e fica
+  no `user_metadata` do usuário (sem tabela própria); sem username, o painel mostra
+  "OLÁ, ADMIN!". Para entrar, o bibliotecário usa e-mail e senha; a foto de perfil é
+  enviada pelo próprio painel.
+- Oriente o usuário a abrir o **SQL Editor** e rodar, **uma por vez**, só a ação
+  desejada (trocando `UUID_DO_USUARIO` pelo User UID):
+
+  Para cada ação abaixo, substitua `UUID_DO_USUARIO` pelo valor da coluna **User UID** (*Authentication → Users*) e execute **uma por vez**:
+
+  **Colocar o username** (quando ainda não há nome definido):
+
+  ```sql
+  UPDATE auth.users SET raw_user_meta_data = coalesce(raw_user_meta_data, '{}'::jsonb) || '{"nome":"Nome"}' WHERE id = 'UUID_DO_USUARIO';
+  ```
+
+  **Trocar o username** (quando já há um nome definido):
+
+  ```sql
+  UPDATE auth.users SET raw_user_meta_data = coalesce(raw_user_meta_data, '{}'::jsonb) || '{"nome":"Novo Nome"}' WHERE id = 'UUID_DO_USUARIO';
+  ```
+
+  **Excluir o username** (o painel volta a mostrar "OLÁ, ADMIN!"; foto e login não mudam):
+
+  ```sql
+  UPDATE auth.users SET raw_user_meta_data = raw_user_meta_data - 'nome' WHERE id = 'UUID_DO_USUARIO';
+  ```
+
+  **Conferir o resultado:**
+
+  ```sql
+  SELECT id, email, raw_user_meta_data->>'nome' AS nome FROM auth.users WHERE id = 'UUID_DO_USUARIO';
+  ```
+
+- Se o usuário pedir para trocar ou excluir o username depois, use as ações
+  correspondentes acima. Excluir o username não apaga a foto nem altera o login.
 
 **3. Publicar no GitHub Pages**
-- Suba o conteúdo da pasta do projeto (a que está dentro do `.zip`
-  — não inclui `setup_private.sql` nem `bibconfig.claude`, que
-  ficam soltos fora dela) em um repositório público
-- Em Settings → Pages → Source, escolha o branch `main` e a
-  pasta `/ (root)` → Save
-- 💾 Guarde o `bibconfig.claude` num lugar seguro fora do GitHub —
-  é ele que permite atualizar a biblioteca sem repetir a entrevista.
-  Veja o quadro "🚨 IMPORTANTE" acima: perdê-lo significa refazer a
-  entrevista completa do zero
+- Crie ou abra um repositório público no GitHub.
+- Descompacte o ZIP e envie para a **raiz** do repositório o conteúdo da
+  pasta do projeto — incluindo `index.html`, `admin.html`, `bibconfig.js`
+  e `bibcore.js`. Envie os arquivos, não o ZIP como arquivo.
+- **Não envie** `setup_private.sql` nem `bibconfig.claude`: eles ficam
+  soltos fora da pasta do projeto no ZIP e contêm dados privados.
+- No repositório, abra **Settings → Pages → Build and deployment**,
+  escolha **Deploy from a branch**, branch `main` e pasta `/ (root)`,
+  e clique em **Save**. Aguarde o GitHub concluir a publicação.
+- Abra a URL do GitHub Pages: teste primeiro se o catálogo carrega e,
+  depois, entre em `admin.html` com o e-mail e a senha criados no Supabase.
 
-Pronto — sua biblioteca estará no ar em poucos minutos.
+💾 Guarde `bibconfig.claude` e `setup_private.sql` em local privado e seguro,
+fora do GitHub. O `bibconfig.claude` é necessário para atualizar a biblioteca
+no futuro sem refazer a entrevista.
+
+Pronto — a biblioteca estará publicada quando o GitHub Pages concluir o deploy
+e os testes do catálogo e do painel funcionarem.
 
 ---
 
@@ -616,8 +704,11 @@ necessário preencher a entrevista de novo.
 
 ## 1. Dados da Biblioteca
 <!-- Use os valores informados na entrevista; não deixe campos obrigatórios vazios. -->
-Tipo: <!-- escolar ou comunitaria. Exemplo: escolar -->
-Nome: <!-- nome oficial. Exemplo: Biblioteca EMTI Maria Vânia -->
+Tipo de Biblioteca: <!-- escolar ou comunitaria. Exemplo: escolar -->
+Denominação da Biblioteca: <!-- Ex.: Biblioteca Escolar; para escolar -->
+Denominação da Escola (sigla): <!-- Ex.: EMTI; somente para escolar -->
+Nome da Escola: <!-- nome oficial sem repetir a sigla; Ex.: Professora Maria Vânia Farias Linhares -->
+Nome da Biblioteca: <!-- nome oficial; para comunitária -->
 
 ## 2. Imagens da Biblioteca
 <!-- Registre o caminho usado e as dimensões reais verificadas, nunca apenas o nome. -->
@@ -639,12 +730,12 @@ Chave do ImgBB: <!-- chave real do ImgBB. Exemplo fictício: 0123456789abcdef012
 Chave da Mistral AI: <!-- chave real da Mistral (letras e números, sem prefixo fixo). Exemplo fictício: EXEMPLO_NAO_UTILIZAR -->
 
 ## 4. Dados do Projeto
-Nome do Projeto: <!-- nome exibido na biblioteca. Exemplo: Biblioteca EMTI Maria Vânia -->
+Nome do Projeto: <!-- nome exibido na biblioteca. Exemplo: Biblioteca Maria Vânia -->
 Autor do Projeto: <!-- pessoa ou instituição responsável. Exemplo: Ruan Oliveira Lima -->
 Site do Autor: <!-- URL opcional; deixe vazio se não houver. Exemplo: https://www.instagram.com/ruanoliveiralima_/ -->
 Ano de Lançamento: <!-- ano com quatro dígitos. Exemplo: 2026 -->
 Versão do Projeto: <!-- formato x.y. Exemplo: 1.0 -->
-Descrição para compartilhamento/Open Graph: <!-- frase curta; exemplo: Pesquise livros e explore o acervo da Biblioteca EMTI Maria Vânia. -->
+Descrição para compartilhamento/Open Graph: <!-- frase curta; exemplo: Pesquise livros e explore o acervo da Biblioteca Maria Vânia. -->
 
 ### Licença
 Tipo de Licença: <!-- com, sem ou dominio. Exemplo: com -->

@@ -21,6 +21,15 @@ Descrição: Descrição detalhada da mudança.
 
 ---
 
+#11 20/10/2026 11:13:23
+Correção nos arquivos `index.html`, `admin.html` e `README.md`
+Descrição: Corrigida a autoria da instância Geladeiroteca Online. Os campos de copyright, rodapés e referências ao site do autor agora identificam a EMTI Maria Vânia, conforme o `bibconfig.claude`. Ruan Oliveira Lima permanece somente nas linhas de atribuição obrigatória à BibVânia Online e nos créditos da obra-base.
+
+#10 20/10/2026 11:10:09
+Mudança nos arquivos `index.html`, `admin.html`, `bibcore.js`, `style.css`, `service-worker.js`, `manifest.webmanifest`, `robots.txt`, `sitemap.xml`, `VERSION.json`, `bibmaker.claude`, `README.md` e `.github/workflows/manter-supabase-ativo.yml`
+Descrição: Atualizada a instância da Geladeiroteca Online da BibVânia 2.0 para a base BibVânia 3.0, preservando os dados da biblioteca, as imagens, a licença, a configuração pública do Supabase, o SQL específico da instância e as personalizações válidas. O BibMaker foi atualizado para a versão 2.7; os metadados, URLs, manifest, robots, sitemap, workflow e rodapés foram alinhados à instância, incluindo a atribuição obrigatória ao projeto BibVânia. A versão própria do projeto permanece 1.6. O cache do service worker foi renovado e a assinatura de integridade foi recalculada. Nenhuma alteração foi executada no banco Supabase.
+
+
 #9 16/10/2026 08:40:49
 Correção no arquivo `admin.html` (VANIA_PROMPT) e no `README.md`
 Descrição: A Vânia não detectava o autor em capas cujo nome aparece só como assinatura manuscrita ou dentro de um logotipo (ex.: "Mauricio" assinado e o logotipo "Mauricio de Sousa Editora" no canto inferior esquerdo de uma capa da Turma da Mônica). No `VANIA_PROMPT`, a regra do campo "autor" ganhou: (a) no item (1), a assinatura manuscrita, o nome estilizado ou o logotipo com nome de pessoa também contam como autor quando indicam quem criou a obra (ex.: "MAURICIO DE SOUSA"); (b) se a assinatura trouxer só o primeiro nome, o modelo completa com o nome inteiro quando ele aparecer em outro lugar da capa ou do verso; (c) a busca obrigatória passou a incluir assinaturas e logotipos no rodapé, nos cantos e no verso, e a releitura antes de usar `"autor_identificado": false` agora procura "assinatura, logotipo ou nome de editora". A ordem de preferência continua: pessoa, depois editora, depois órgão. No `README.md`, a frase do `VANIA_PROMPT` agora diz "autor (pessoa, incluindo assinatura manuscrita ou logotipo com nome de pessoa; se não houver, ...". Em termos simples: a Vânia passa a reconhecer o nome do autor mesmo quando ele aparece como assinatura ou dentro do logotipo, em vez de responder "autor não identificado".

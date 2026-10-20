@@ -1,4 +1,4 @@
-# Geladeiroteca Online v1.6
+# Geladeiroteca Online v3.0
 
 **Sistema de Biblioteca Móvel Digital**
 da EMTI Professora Maria Vânia Farias Linhares
@@ -17,6 +17,7 @@ no site. A proteção dos dados depende das políticas RLS e das RPCs do
 Medidas adicionais de segurança do painel e do catálogo:
 
 - O `supabase-js` é carregado com **versão fixa** (`@2.89.0`) no `admin.html` e no `bibcore.js`; ao atualizar, troque nos dois lugares.
+- O ISBN do verso é lido das barras no navegador (`BarcodeDetector` nativo; se não existir, `@zxing/library@0.21.3` do jsDelivr, versão fixa, em `admin.html`). A leitura vale para a capa e para o verso, e a IA só entra como alternativa quando as barras não puderem ser lidas. O botão da Vân-IA funciona com a capa, com o verso ou com os dois. Na edição, com imagens já salvas, o navegador tenta baixar a imagem do ImgBB (`https://*.ibb.co` no `connect-src`) para ler as barras; se não conseguir, vale só a leitura da IA.
 - A sessão do bibliotecário fica em `localStorage` e continua ativa ao fechar a aba ou o navegador. Ela é encerrada após **8 dias sem nenhuma interação** com o painel (`INATIVIDADE_LIMITE_MS` no `admin.html`) ou ao tocar em SAIR. Como todos os sites de `usuario.github.io` compartilham a mesma origem, não publique outros sites nela.
 - As chaves ImgBB e Mistral AI ficam em `window.BibChaves` (privado) e são apagadas ao sair. Para isolamento total, use um proxy (Supabase Edge Function).
 - Páginas abertas dentro de um `iframe` ficam ocultas (proteção contra clickjacking; `frame-ancestors` não funciona em `<meta>`).
@@ -44,9 +45,10 @@ Medidas adicionais de segurança do painel e do catálogo:
 
 ## Sobre
 
-A **Geladeiroteca Online** é a biblioteca móvel digital da **EMTI Professora Maria Vânia Farias Linhares**. Esta instância, mantida por **EMTI Maria Vânia**, foi personalizada a partir da BibVânia Online para atender à comunidade escolar, mantendo catálogo público, área administrativa e recursos de pesquisa e reservas.
 
-O sistema é composto por múltiplas páginas com funções distintas: um catálogo público acessível aos leitores, uma Área do Bibliotecário completa e o `bibmaker.claude` para gerar futuras instâncias personalizadas prontas para publicação no GitHub Pages.
+O projeto nasceu na **EMTI Professora Maria Vânia Farias Linhares** (Mucambo, CE) e foi construído pela **EMTI Maria Vânia** para atender às necessidades reais de uma biblioteca escolar pública. Mais tarde, foi projetado para ser replicável: qualquer escola ou biblioteca comunitária pode gerar sua própria instância personalizada usando o **bibmaker.claude**, o arquivo construtor de bibliotecas incluso no projeto, sem precisar de conhecimento técnico — basta abri-lo em uma conversa com o Claude.
+
+O sistema é composto por múltiplas páginas com funções distintas: um catálogo público acessível a todos os alunos, uma Área do Bibliotecário completa e o `bibmaker.claude` para geração de novas instâncias prontas para publicação no GitHub Pages.
 
 ---
 
@@ -89,27 +91,24 @@ O sistema é composto por múltiplas páginas com funções distintas: um catál
 
 ```
 Geladeiroteca Online/
-├── index.html               — Catálogo público da biblioteca móvel
+├── index.html               — Acervo público
 ├── admin.html               — Painel do bibliotecário
-├── bibmaker.claude          — Construtor para futuras atualizações
-├── bibcore.js               — Banco de dados, utilitários e transições
+├── bibmaker.claude           — Construtor de bibliotecas (uso com o Claude)
+├── bibconfig.claude          — Template em branco de configuração salva (ver bibmaker.claude)
+├── bibcore.js              — Banco de dados, utilitários e transições
 ├── style.css                — Estilos globais
-├── logo.png                 — Logo da Geladeiroteca Online
-├── favicon.png              — Favicon da biblioteca
+├── logo.png                 — Logo do sistema
+├── favicon.png              — Favicon
 ├── og-image.png             — Imagem Open Graph
 ├── manifest.webmanifest     — Manifesto da aplicação web
 ├── robots.txt               — Regras para crawlers
-├── .github/workflows/       — Workflow para manter o Supabase ativo
-├── sitemap.xml              — Sitemap do catálogo público
-├── VERSION.json             — Versão-base e versão do projeto
-├── CHANGELOG.md             — Histórico próprio desta biblioteca
-├── bibhash.sig              — Assinatura de integridade da instância
+├── .github/workflows/       — Workflow periódico para manter o Supabase ativo
+├── sitemap.xml              — Sitemap da página pública
+├── VERSION.json             — Versão do sistema
 ├── supabase_setup.sql       — Configuração inicial do banco
+├── setup_private.sql        — Chaves de API (ImgBB, Mistral AI) — NÃO subir ao GitHub
 └── README.md                — Este arquivo
 ```
-
-O ZIP também contém `setup_private.sql` e `bibconfig.claude` na raiz, **fora desta pasta**. Esses dois arquivos são privados: não os publique no GitHub.
-
 
 📄 Descrição detalhada de cada arquivo (para desenvolvedores): veja [Para Desenvolvedores](#para-desenvolvedores), seção expansível "Arquivos do projeto".
 
@@ -117,11 +116,11 @@ O ZIP também contém `setup_private.sql` e `bibconfig.claude` na raiz, **fora d
 
 ## Licença
 
-Esta instância é compartilhada sob a licença <a href="https://creativecommons.org/licenses/by-sa/4.0/deed.pt-br" target="_blank" rel="license noopener noreferrer"><strong>CC-BY-SA-4.0</strong></a>. A autoria desta biblioteca é de **EMTI Maria Vânia**; por ser derivada, também mantém a atribuição à BibVânia Online e a seu autor original, conforme detalhado em [`LICENCE.md`](LICENCE.md).
+Projeto licenciado sob <a href="https://creativecommons.org/licenses/by-sa/4.0/deed.pt-br" target="_blank" rel="license noopener noreferrer"><strong>CC-BY-SA-4.0</strong></a>. Você pode usar, copiar, modificar e distribuir livremente, desde que mantenha a atribuição ao autor original e distribua adaptações sob a mesma licença CC BY-SA 4.0: **Ruan Oliveira Lima** — <a href="https://github.com/limaoruan/bibvania" target="_blank" rel="noopener noreferrer">github.com/limaoruan/bibvania</a>.
 
 Atribuição sugerida para projetos derivados:
 
-> Derivado do projeto BibVânia Online por [Ruan Oliveira Lima](https://www.instagram.com/ruanoliveiralima_/) © 2026 — <a href="https://github.com/limaoruan/bibvania" target="_blank" rel="noopener noreferrer">github.com/limaoruan/bibvania</a> — <a href="https://creativecommons.org/licenses/by-sa/4.0/deed.pt-br" target="_blank" rel="license noopener noreferrer">CC-BY-SA 4.0</a>
+> Geladeiroteca Online por [EMTI Maria Vânia](https://www.instagram.com/escmariavania/) © 2026 — <a href="https://github.com/limaoruan/bibvania" target="_blank" rel="noopener noreferrer">github.com/limaoruan/bibvania</a> — <a href="https://creativecommons.org/licenses/by-sa/4.0/deed.pt-br" target="_blank" rel="license noopener noreferrer">CC-BY-SA 4.0</a>
 
 A licença cobre o código-fonte, scripts SQL, assets visuais originais e documentação. Dependências de terceiros têm suas próprias licenças:
 
@@ -139,22 +138,22 @@ A licença cobre o código-fonte, scripts SQL, assets visuais originais e docume
 
 ## BibTools
 
-Ferramentas do ecossistema BibVânia Online que estendem ou complementam o sistema principal.
+Ferramentas do ecossistema Geladeiroteca Online que estendem ou complementam o sistema principal.
 
 ---
 
 ### 🔧 BibMaker
 
-Arquivo construtor de bibliotecas personalizadas baseadas no BibVânia Online, usado numa conversa
+Arquivo construtor de bibliotecas personalizadas baseadas no Geladeiroteca Online, usado numa conversa
 com o Claude — não é uma página web e não requer navegador ou servidor.
 
 **Como usar:**
 
-- Baixe os arquivos originais da BibVânia Online, abra o arquivo `bibmaker.claude` numa conversa com o Claude e digite o comando **`BibMaker`** (não diferencia maiúsculas/minúsculas) para começar
+- Baixe os arquivos originais da Geladeiroteca Online, abra o arquivo `bibmaker.claude` numa conversa com o Claude e digite o comando **`BibMaker`** (não diferencia maiúsculas/minúsculas) para começar
 - Responda à entrevista guiada: dados da biblioteca (nome, chaves de API, imagens, licença, GitHub)
 - O Claude aplica as edições diretamente nos arquivos-base e gera `setup_private.sql` com suas chaves
 
-O resultado é entregue em um `.zip` (nomeado igual à pasta do projeto): uma pasta com todos os arquivos do sistema já personalizados (incluindo `README.md`, `LICENCE.md`, `VERSION.json`, o `CHANGELOG.md` próprio da biblioteca, o `bibmaker.claude`, o `bibmaker-logo.png` e o `bibhash.sig` próprio da biblioteca), e o `setup_private.sql` + `bibconfig.claude` soltos na raiz do `.zip`, fora dessa pasta. Guarde o `bibconfig.claude` — é ele que permite atualizar a biblioteca depois, seja por uma nova versão da BibVânia Online, seja por mudanças na própria biblioteca, sem repetir a entrevista.
+O resultado é entregue em um `.zip` (nomeado igual à pasta do projeto): uma pasta com todos os arquivos do sistema já personalizados (incluindo `README.md`, `LICENCE.md`, `VERSION.json`, o `CHANGELOG.md` próprio da biblioteca, o `bibmaker.claude`, o `bibmaker-logo.png` e o `bibhash.sig` próprio da biblioteca), e o `setup_private.sql` + `bibconfig.claude` soltos na raiz do `.zip`, fora dessa pasta. Guarde o `bibconfig.claude` — é ele que permite atualizar a biblioteca depois, seja por uma nova versão da Geladeiroteca Online, seja por mudanças na própria biblioteca, sem repetir a entrevista.
 
 > ⚠️ O arquivo `setup_private.sql` contém suas chaves de API — **não suba ao GitHub**.
 
@@ -164,20 +163,48 @@ Guia completo, passo a passo: [Como Criar uma Biblioteca](#como-criar-uma-biblio
 
 ## Como Criar uma Biblioteca
 
-O **bibmaker.claude** gera automaticamente uma instância personalizada do BibVânia Online, pronta para publicar no GitHub Pages. Não é necessário editar nenhum arquivo manualmente — a entrevista acontece numa conversa com o Claude.
+O **bibmaker.claude** gera automaticamente uma instância personalizada do Geladeiroteca Online, pronta para publicar no GitHub Pages. Não é necessário editar nenhum arquivo manualmente — a entrevista acontece numa conversa com o Claude.
 
 ⚠️ O arquivo `setup_private.sql` gerado contém suas chaves de API. Nunca publique esse arquivo no GitHub.
 
-1. **Baixe os arquivos originais da BibVânia Online**, abra o arquivo `bibmaker.claude` numa conversa com o Claude e digite o comando **`BibMaker`** (não diferencia maiúsculas/minúsculas) para começar.
+1. **Baixe os arquivos originais da Geladeiroteca Online**, abra o arquivo `bibmaker.claude` numa conversa com o Claude e digite o comando **`BibMaker`** (não diferencia maiúsculas/minúsculas) para começar.
 2. **Escolha o tipo de biblioteca.** Responda se é *Escolar* ou *Comunitária*. O nome do projeto será gerado automaticamente com base nessa classificação. O BibMaker também permite informar, opcionalmente, uma descrição personalizada para compartilhamento/Open Graph; se ficar vazia, usa a descrição padrão do BibMaker.
 3. **Informe os dados do projeto.** Nome da biblioteca, autor, site, versão e licença. Esses dados aparecem no rodapé e nas metatags de todas as páginas geradas.
 4. **Informe as chaves de API.** Supabase URL e Publishable Key, ImgBB API (upload de capas) e Mistral AI API (análise de capa com IA, botão Vânia) — todas obrigatórias. O ImgBB e a Mistral AI oferecem plano gratuito. Veja abaixo como criar conta e obter cada chave.
 5. **Informe as imagens (obrigatório).** Logo, favicon e imagem Open Graph são obrigatórios; o BibMaker não usa imagens padrão e só avança quando as três forem fornecidas (ou geradas por ele a seu pedido).
 6. **Informe o repositório GitHub.** URL do repositório e da página GitHub Pages onde o sistema será publicado.
 7. **Aguarde a aplicação das edições.** O Claude confirma um resumo com você e então edita os arquivos-base diretamente, gerando também `setup_private.sql` e `bibconfig.claude` (configuração salva, para facilitar futuras atualizações) com suas chaves.
-8. **Configure o Supabase.** No painel do Supabase, acesse *SQL Editor → New query*, cole o conteúdo de `supabase_setup.sql` e execute. O script inclui a criação das tabelas, políticas, índices e RPCs de reservas. Faça o mesmo com o `setup_private.sql`. Lembre-se de nunca enviar o `setup_private.sql` ao GitHub nem compartilhá-lo de nenhuma forma — ele contém suas chaves privadas de API.
-9. **Crie o usuário bibliotecário.** No Supabase, vá em *Authentication → Users → Add user → Create new user*, informe e-mail e senha e clique em **Create User**. Quem está logado já é administrador — não há tabela de admins. Opcionalmente, o nome exibido na Área do Bibliotecário (username) é gerenciado no SQL Editor por UUID (Authentication → Users → coluna *User UID*): para **colocar** o nome, `UPDATE auth.users SET raw_user_meta_data = coalesce(raw_user_meta_data, '{}'::jsonb) || '{"nome":"Nome"}' WHERE id = 'UUID_DO_USUARIO';`; para **trocar**, o mesmo comando com o novo nome (`{"nome":"Novo Nome"}`); para **excluir**, `UPDATE auth.users SET raw_user_meta_data = raw_user_meta_data - 'nome' WHERE id = 'UUID_DO_USUARIO';`; para conferir, `SELECT id, email, raw_user_meta_data->>'nome' AS nome FROM auth.users WHERE id = 'UUID_DO_USUARIO';`. Sem nome, o painel mostra "OLÁ, ADMIN!".
-10. **Publique no GitHub Pages.** Suba o conteúdo da pasta do projeto (dentro do `.zip` entregue — o `setup_private.sql` fica fora dela, na raiz do `.zip`) em um repositório público. Em *Settings → Pages → Source*, escolha o branch `main` e pasta `/ (root)`.
+8. **Configure o Supabase correto.** Abra o projeto Supabase cuja URL foi informada ao BibMaker. No *SQL Editor → New query*, cole e execute primeiro o conteúdo completo de `supabase_setup.sql` e confirme que terminou sem erros. Depois, execute o `setup_private.sql` gerado para gravar as chaves privadas do ImgBB e da Mistral AI. Não publique nem compartilhe esse arquivo.
+9. **Confira `bibconfig.js`.** Na pasta do projeto, confirme que `SUPABASE_URL` e `SUPABASE_PUBLISHABLE_KEY` correspondem ao mesmo projeto Supabase configurado acima. A URL e a chave `sb_publishable_` são usadas pelo site para conectar ao banco; não use chave `secret` ou `service_role` no frontend.
+10. **Crie o usuário bibliotecário e o username (nome exibido).** No mesmo projeto Supabase, vá a *Authentication → Users → Add user → Create new user*, informe o e-mail e uma senha forte e clique em **Create User**. Copie o **User UID** do usuário criado. O username é opcional: ele é exibido no painel ("OI, nome!", só o primeiro nome) e fica no `user_metadata` do usuário, sem tabela própria; sem username, o painel mostra "OLÁ, ADMIN!". O login continua sendo feito com e-mail e senha, e a foto de perfil é enviada pelo próprio painel. Para colocar, trocar ou excluir o username, use o *SQL Editor*:
+
+   Para cada ação abaixo, substitua `UUID_DO_USUARIO` pelo valor da coluna **User UID** (*Authentication → Users*) e execute **uma por vez**:
+
+   **Colocar o username** (quando ainda não há nome definido):
+
+   ```sql
+   UPDATE auth.users SET raw_user_meta_data = coalesce(raw_user_meta_data, '{}'::jsonb) || '{"nome":"Nome"}' WHERE id = 'UUID_DO_USUARIO';
+   ```
+
+   **Trocar o username** (quando já há um nome definido):
+
+   ```sql
+   UPDATE auth.users SET raw_user_meta_data = coalesce(raw_user_meta_data, '{}'::jsonb) || '{"nome":"Novo Nome"}' WHERE id = 'UUID_DO_USUARIO';
+   ```
+
+   **Excluir o username** (o painel volta a mostrar "OLÁ, ADMIN!"; foto e login não mudam):
+
+   ```sql
+   UPDATE auth.users SET raw_user_meta_data = raw_user_meta_data - 'nome' WHERE id = 'UUID_DO_USUARIO';
+   ```
+
+   **Conferir o resultado:**
+
+   ```sql
+   SELECT id, email, raw_user_meta_data->>'nome' AS nome FROM auth.users WHERE id = 'UUID_DO_USUARIO';
+   ```
+
+11. **Publique no GitHub Pages.** Crie ou use um repositório público e envie para a raiz do branch `main` o conteúdo da pasta do projeto dentro do `.zip` (incluindo `index.html`, `admin.html`, `bibconfig.js` e `bibcore.js`, mas não o próprio arquivo `.zip`). Não envie `setup_private.sql` nem `bibconfig.claude`: eles ficam fora da pasta pública por conterem chaves privadas. No GitHub, abra *Settings → Pages → Build and deployment*, selecione **Deploy from a branch**, branch `main` e pasta `/ (root)`, e salve. Aguarde a publicação e teste a URL: primeiro o catálogo e depois o login em `admin.html`.
 
 > **Proteção adicional do Auth (plano Pro ou superior):** nas configurações do Auth do Supabase, procure a opção **Prevent the use of leaked passwords** (também descrita como *Leaked password protection*) e ative-a. Dependendo da versão do painel, ela pode aparecer em *Authentication → Settings* ou dentro das configurações de senha. Esse recurso não está disponível no plano gratuito; nesse caso, o alerta correspondente do Security Advisor pode permanecer. A opção é administrada pelo painel do Auth e não pelo SQL da aplicação.
 
@@ -189,7 +216,7 @@ O **bibmaker.claude** gera automaticamente uma instância personalizada do BibV�
 
 1. Acesse [supabase.com](https://supabase.com) e clique em **Start your project**.
 2. Crie uma conta gratuita com e-mail ou pelo GitHub.
-3. Clique em **New Project**, dê um nome ao projeto, defina uma senha forte e escolha a região mais próxima (ex: *South America — São Paulo*). Aguarde a criação — isso pode levar alguns minutos. As tabelas criadas pelo BibVânia Online já têm RLS (Row Level Security) ativado por padrão via `supabase_setup.sql`; não desative essa opção no painel.
+3. Clique em **New Project**, dê um nome ao projeto, defina uma senha forte e escolha a região mais próxima (ex: *South America — São Paulo*). Aguarde a criação — isso pode levar alguns minutos. As tabelas criadas pelo Geladeiroteca Online já têm RLS (Row Level Security) ativado por padrão via `supabase_setup.sql`; não desative essa opção no painel.
 4. No painel do projeto, vá em **Project Settings → API**.
 5. Copie a **Project URL** — esse é o seu *Supabase URL*.
 6. Copie a chave **publishable** (`sb_publishable_...`). Essa é a única chave do Supabase usada pelo frontend.
@@ -227,9 +254,9 @@ O workflow substitui o uso do cron-job.org para este projeto. O cron-job.org fic
 ## Como Atualizar uma Biblioteca
 
 
-💡 Ao abrir o admin.html da sua biblioteca, um banner "⚠️ Atualização disponível" aparece automaticamente quando há uma versão mais nova do BibVânia Online — o botão leva ao repositório oficial.
+💡 Ao abrir o admin.html da sua biblioteca, um banner "⚠️ Atualização disponível" aparece automaticamente quando há uma versão mais nova do Geladeiroteca Online — o botão leva ao repositório oficial.
 
-1. **Baixe os arquivos-base da nova versão da BibVânia Online** a partir do repositório oficial.
+1. **Baixe os arquivos-base da nova versão da Geladeiroteca Online** a partir do repositório oficial.
 2. **Abra o `bibmaker.claude` numa conversa com o Claude**, junto com o `bibconfig.claude` da sua biblioteca (gerado na criação, guardado fora do GitHub) — suas configurações são lidas automaticamente, sem precisar reenviar os arquivos da biblioteca inteira.
 3. **Para cada campo já preenchido, confirme se quer manter ou trocar.** O Claude mostra o valor salvo de cada dado (nome, autor, chaves de API, imagens, licença, repositório) e pergunta se continua o mesmo ou se você quer alterá-lo; campos que ainda estiverem vazios no seu `bibconfig.claude` são perguntados normalmente.
 4. **Aguarde a aplicação das edições.** O Claude aplica os arquivos-base atualizados mantendo suas configurações e, se a nova versão exigir scripts SQL adicionais, indica quais executar no Supabase. O `bibconfig.claude` é regenerado com os dados mais atuais.
@@ -276,7 +303,7 @@ O catálogo público (`index.html`) não exige cadastro nem login. Qualquer visi
 #### Dica de uso
 
 * Use a busca e os filtros do catálogo para encontrar o livro desejado e verifique sua disponibilidade antes de se deslocar até a biblioteca — o índice mostra em tempo real quantos exemplares estão disponíveis.
-* Use navegadores modernos e atualizados — Chrome e Edge são os mais compatíveis com todas as funcionalidades do BibVânia Online.
+* Use navegadores modernos e atualizados — Chrome e Edge são os mais compatíveis com todas as funcionalidades do Geladeiroteca Online.
 
 ### Para Bibliotecários e Auxiliares
 
@@ -313,7 +340,7 @@ Como referência, a análise considera tendências de violência, sexo e nudez e
 | **Devoluções** | Lista os empréstimos ativos agrupados por urgência (🔴 atrasado, 🟡 devolver hoje, 🟢 em aberto, ⚫ sem data). Permite registrar devolução, renovar prazo ou consultar histórico. |
 | **Acervo** | Visualização completa do acervo em carrossel. Permite busca, filtragem, edição rápida e exclusão. |
 | **Pessoas** | Cadastro de alunos (nome, sexo, nível, ano e turma), visitantes e funcionários. Os perfis permitem marcar PcD. |
-| **Lista de Pessoas** | Lista paginada de todos os cadastros com busca por nome e acesso ao histórico de empréstimos. |
+| **Lista de Pessoas** | Lista paginada de todos os cadastros com busca por nome e o total de livros pegos emprestados por pessoa. |
 | **Relatório** | Indicadores de acervo e circulação; agora inclui reservas do período por status (pendentes, concluídas e canceladas). |
 
 #### Registrando uma devolução
@@ -350,7 +377,7 @@ Como referência, a análise considera tendências de violência, sexo e nudez e
 <details>
 <summary><strong>📁 Arquivos do projeto — referência técnica completa (clique para expandir)</strong></summary>
 
-Esta seção é voltada para quem deseja entender, modificar ou manter o código-fonte do BibVânia Online. O projeto é 100% frontend (HTML + CSS + JavaScript vanilla) com backend via Supabase (PostgreSQL + Realtime + Auth + Storage).
+Esta seção é voltada para quem deseja entender, modificar ou manter o código-fonte do Geladeiroteca Online. O projeto é 100% frontend (HTML + CSS + JavaScript vanilla) com backend via Supabase (PostgreSQL + Realtime + Auth + Storage).
 
 #### Arquivos do projeto
 
@@ -360,7 +387,7 @@ Esta seção é voltada para quem deseja entender, modificar ou manter o código
 ##### `admin.html`
 
 - Área do Bibliotecário completo. Acesso restrito: sem sessão ativa, redireciona para `login.html`.
-- *Barra de acessibilidade — item exclusivo do admin:* botão "Verificar Versão" no menu de atalhos compara o `VERSION.json` local com o remoto (`raw.githubusercontent.com` do BibVânia Online) via comparação semver; se desatualizado, exibe o banner "⚠️ Atualização disponível" com botão que abre o repositório da BibVânia Online em nova aba; se já atualizado, mostra "✅ ATUALIZADO"; sem conexão, "📡 SEM CONEXÃO" (ambos clicáveis para nova tentativa).
+- *Barra de acessibilidade — item exclusivo do admin:* botão "Verificar Versão" no menu de atalhos compara o `VERSION.json` local com o remoto (`raw.githubusercontent.com` do Geladeiroteca Online) via comparação semver; se desatualizado, exibe o banner "⚠️ Atualização disponível" com botão que abre o repositório da Geladeiroteca Online em nova aba; se já atualizado, mostra "✅ ATUALIZADO"; sem conexão, "📡 SEM CONEXÃO" (ambos clicáveis para nova tentativa).
 - *Modal de perfil do bibliotecário:* acessível pelo botão "OI, [NOME]!" no menu de atalhos — o nome é lido do cache `bibvania_admin_nome` no `localStorage` antes do módulo carregar (evita flash mostrando "Sair" por engano); exibe foto de perfil (círculo com inicial como fallback) com upload/exclusão via `processarFotoPerfil()`/`excluirFotoPerfil()`/`abrirFotoPerfil()` (aceita JPG/PNG/WebP/HEIC/HEIF), e-mail, nome e botão Sair. *Formatos aceitos no campo "URL do Livro"* (cadastro manual e edição): `.pdf`, `.epub`, `.epub3`, `.mp3`, `.m4b`, `.cbz` — além de PDFs, o acervo também pode vincular audiolivros e quadrinhos digitais.
 - *Aba Cadastro — pesquisa e edição de livro (`window._cadEdit`, `window._cadSairEdicao`, `window._cadLabelBtn`):* o campo `#cadBuscaLivro` (acima das capas) busca no cache de `DB.getLivros()` (renovado a cada 30s) por título, autor, ISBN ou ID, sem acento e sem diferenciar maiúsculas; as sugestões são montadas via DOM (`textContent`), sem `innerHTML` com dados do banco. Ao selecionar, o formulário é preenchido (incluindo Volume, Edição, quantidade total, descrição da capa, capa e verso) e `window._cadEdit.id` guarda o ID em edição; o botão de envio vira "EDITAR LIVRO" e o título do card vira "EDITAR LIVRO". No submit, se houver ID, salva com `DB.atualizarLivro` (recalcula `quantidade_disponivel`), recusa quantidade total menor que os empréstimos ativos, preserva capa/verso existentes quando não há novo envio e limpa no banco só o que foi excluído com "EXCLUIR CAPA/VERSO". O botão da IA (Vânia) só habilita após escolher uma nova capa. `window._cadEditarLivro(id)` (chamada pelo botão "✏️ EDITAR" dos cards do ACERVO, nos dois renderizadores) busca o livro atualizado com `DB.getLivroPorId`, troca para a aba CADASTRO (`switchTab`) e chama a mesma função interna `selecionar()` usada pela pesquisa, deixando o livro em modo edição.
 - *Aba Cadastrar Pessoas:* checkbox "Funcionário" oculta os campos de nível/ano/turma; "Nível de Ensino" oferece Ensino Fundamental (Ano 1–9 + Turma de uma letra), Ensino Médio ou EJA (sub-nível Fundamental/Médio + número da Sala); checkbox "Pessoa com Deficiência (PcD)" disponível em qualquer cadastro.
@@ -369,12 +396,12 @@ Esta seção é voltada para quem deseja entender, modificar ou manter o código
 - *Aba Acervo — empréstimos ativos por livro:* cada card do acervo tem uma seção colapsável "EMPRÉSTIMOS" listando os empréstimos ativos daquele livro, cada um com 4 ações: "DEVOLVER" (pede a data de devolução e chama `devolver()`), "EDITAR" (abre `modalEditEmp`), "RENOVAR" (abre `modalRenovarEmp`) e "EXCLUIR" (`delEmp()` remove o registro sem alterar a quantidade disponível).
 - *Modal Editar Empréstimo (`modalEditEmp`):* permite trocar a pessoa do empréstimo (busca com sugestões filtradas por aluno/funcionário, preenchendo automaticamente sexo/ano/turma), ajustar "DIAS DE EMPRÉSTIMO" e a data, ou marcar "SEM DATA DEFINIDA" — a data prevista de devolução é recalculada (data base + dias); o livro do empréstimo é somente leitura, com aviso de que para trocá-lo é preciso excluir e criar um novo empréstimo.
 - *Renovar empréstimo (`modalRenovarEmp`):* pede apenas "DIAS ADICIONAIS" — soma esses dias à data prevista de devolução atual (ou à data do empréstimo, se ainda sem prazo definido) e acumula em `dias_emprestimo`; no card do Acervo o botão Renovar fica sempre habilitado, mas na aba Devoluções é desabilitado para empréstimos "sem data definida".
-- *Detecção de duplicidade no cadastro manual:* antes de inserir, `window._detectarDuplicata(titulo, autor, isbn, temCapa)` verifica se já existe um livro equivalente; em caso positivo, abre `modalDuplicidade` com a capa/dados do livro existente e duas opções — "➕ Juntar Quantidade" (soma ao total/disponível do livro existente) ou "📋 Cadastrar como Novo" (insere com novo ID, ignorando a detecção — útil para edições/capas diferentes da mesma obra).
-- *Aba Lista de Pessoas:* agrupa por turma (Fundamental/Médio/EJA) e por "Funcionários"; cada pessoa exibe badges de turma/PcD e, se houver empréstimos ativos, um badge com a contagem. Um acordeão (`togglePessoaAccordion`) carrega na primeira abertura o histórico completo de empréstimos via `DB.getHistoricoPessoa()` — cada item mostra livro, autor, data de retirada e devolução (ou "EM MÃO" se ainda ativo) — e atualiza o badge para o total histórico. Botões "EDITAR" (`modalEditPessoa`, com verificação de nome duplicado na mesma turma) e "EXCLUIR" (`excluirPessoa`).
+- *Detecção de livro parecido no cadastro manual:* antes de enviar imagens e inserir um livro novo (não na edição), `_confirmarLivroParecido()` consulta o acervo e considera parecido o livro que tiver o **mesmo título e autor** (comparação sem acentos, caixa ou espaços extras) **ou o mesmo ISBN** (só dígitos e X; ignorado se o ISBN não foi informado). Em caso positivo, abre `modalLivroParecido` comparando "LIVRO QUE SERÁ CADASTRADO" e "LIVRO JÁ EXISTENTE" (miniaturas 4:5 iguais às do acervo, com a frase do motivo: mesmo título e autor, mesmo ISBN ou ambos) e três opções — "CANCELAR", "NOVO" (cadastra com novo ID mesmo assim, útil para edições ou capas diferentes da mesma obra) e "EDITAR EXISTENTE" (abre a edição do livro já cadastrado).
+- *Aba Lista de Pessoas:* agrupa por turma (Fundamental/Médio/EJA) e por "Funcionários"; cada pessoa exibe o badge de turma/PcD e um selo verde com o total de livros pegos emprestados ("📚 N LIVROS", "📚 0 LIVROS" quando nunca pegou), somando empréstimos ativos e devolvidos; o mesmo livro pego mais de uma vez conta mais de uma vez. A contagem (`_carregarContagemEmprestimos()`) busca os empréstimos em páginas de 1.000 e soma por `pessoa_id`; empréstimos antigos sem `pessoa_id` entram pelo nome, somente se o nome for único na lista. Se a contagem falhar, o selo não é exibido. Botões "EDITAR" (`modalEditPessoa`, com verificação de nome duplicado na mesma turma) e "EXCLUIR" (`excluirPessoa`).
 - *Aba Devoluções — sub-abas:* grade 2×2 com 4 botões — "⚠️ Atrasado", "📅 Devolver Hoje", "✅ Em Aberto" e "🕐 Sem Data Definida" — cada um com a contagem de itens; a busca textual navega automaticamente para a primeira sub-aba com resultado. Empréstimos do mesmo leitor são agrupados em um único acordeão (todos os livros emprestados a ele) com badges de urgência por pessoa, e o botão "DEVOLUÇÕES" do menu principal recebe cor de fundo (vermelho/amarelo/verde/cinza) conforme a urgência mais crítica entre todos os empréstimos ativos.
 - *Seletor de capa (cadastro manual e edição):* em dispositivos móveis abre um bottom-sheet para escolher Câmera ou Galeria; no desktop abre a galeria diretamente. A imagem é redimensionada por canvas para no máximo 1080×1350px (4:5) em JPEG 92% antes do upload ao ImgBB. Antes disso, `_validarArquivoImagem` confere só o essencial: formato JPG, PNG, WebP ou HEIC/HEIF, até 10 MB e imagem legível pelo navegador; não há exigência de dimensão mínima nem de proporção.
 - *Upload ImgBB (`_iaUploadImgbb`):* aceita data URL ou base64 puro, valida tamanho mínimo (100 chars), faz POST para `api.imgbb.com/1/upload` com backoff — até 3 tentativas com espera de 1200ms e 2400ms entre elas (resolve rate limit e instabilidade de rede em dispositivos móveis).
-- *Botão Vânia — análise de capa com IA (`window.abrirVanIA`):* disponível no cadastro novo e no modo EDITAR LIVRO; fica habilitado assim que há uma capa (`window._capaBase64` recém-selecionada ou, na edição, a capa salva `_cadEdit.livro.imagem_url`, via `_vanIACapaAtual()`; o verso segue a mesma regra em `_vanIAVersoAtual()`, respeitando `capaRemovida`/`versoRemovido`). Na edição, como o formulário já vem preenchido, a análise pede confirmação e substitui título, autor, ISBN, classificação, Volume, Edição e descrição da capa (a quantidade não muda); nada é gravado até "EDITAR LIVRO". Envia a imagem (base64 ou URL) para a Mistral AI (`https://api.mistral.ai/v1/chat/completions`, modelo da constante `VANIA_MODELO` = `ministral-14b-2512`, `response_format: json_object`) com um prompt fixo (`VANIA_PROMPT`) pedindo título, autor (pessoa, incluindo assinatura manuscrita ou logotipo com nome de pessoa; se não houver, a editora impressa na capa ou no verso, mesmo pequena ou como logotipo com nome, no rodapé ou nos cantos, ou, por último, o órgão responsável; a flag `autor_identificado` só vira `false` quando nenhum dos três aparece), ISBN, categoria (uma das 6 fixas) e descrição de acessibilidade da capa. `_vanIAPreencherFormulario()` aplica o resultado sem sobrescrever campos já preenchidos manualmente, usando `_sincAutorNaoId()` quando o autor não é identificado. Após cada chamada (sucesso ou erro), `_vanIAIniciarCooldown()` bloqueia o botão por `VANIA_COOLDOWN_S` (1s) com contagem regressiva no próprio rótulo, evitando estourar os limites de uso da Mistral AI; se a Mistral responder 429 (limite atingido), a pausa sobe para 60s. A chave é lida de `window.BibChaves.obter('mistral')` (tabela `config_privada`, chave `mistral_api_key`); sem ela, o botão exibe erro ao ser clicado.
+- *Botão Vânia — análise de capa com IA (`window.abrirVanIA`):* disponível no cadastro novo e no modo EDITAR LIVRO; fica habilitado assim que há uma capa OU um verso (`window._capaBase64`/`window._versoBase64` recém-selecionados ou, na edição, os salvos `_cadEdit.livro.imagem_url`/`verso_url`, via `_vanIACapaAtual()` e `_vanIAVersoAtual()`, respeitando `capaRemovida`/`versoRemovido`). Na edição, como o formulário já vem preenchido, a análise pede confirmação e substitui título, autor, ISBN, classificação, Volume, Edição e descrição da capa (a quantidade não muda); nada é gravado até "EDITAR LIVRO". Envia a imagem (base64 ou URL) para a Mistral AI — só as imagens que existem: a capa ("Primeira imagem: CAPA do livro.") e/ou o verso ("Segunda imagem: VERSO do livro."), cada uma avisando quando a outra não foi enviada — (`https://api.mistral.ai/v1/chat/completions`, modelo da constante `VANIA_MODELO` = `ministral-14b-2512`, `response_format: json_object`) com um prompt fixo (`VANIA_PROMPT`) pedindo título, autor (pessoa, incluindo assinatura manuscrita ou logotipo com nome de pessoa, transcrita letra por letra, sem completar o nome pela memória, preferindo a grafia impressa do verso e, em dúvida real, usando a editora; se não houver, a editora impressa na capa ou no verso, mesmo pequena ou como logotipo com nome, no rodapé ou nos cantos, ou, por último, o órgão responsável; a flag `autor_identificado` só vira `false` quando nenhum dos três aparece), ISBN, categoria (uma das 6 fixas; a sinopse do verso é a principal evidência para a classificação indicativa e, sem sinopse, a IA usa título, ilustrações, gênero (com apoio de um guia de gêneros por faixa etária no prompt) e demais elementos da capa e do verso) e descrição de acessibilidade da capa. `_vanIAPreencherFormulario()` aplica o resultado sem sobrescrever campos já preenchidos manualmente (o ISBN só é preenchido se estiver completo, com 10 ou 13 caracteres e dígito verificador correto, validado por `_vanIAIsbnValido()`), usando `_sincAutorNaoId()` quando o autor não é identificado. Após cada chamada (sucesso ou erro), `_vanIAIniciarCooldown()` bloqueia o botão por `VANIA_COOLDOWN_S` (1s) com contagem regressiva no próprio rótulo, evitando estourar os limites de uso da Mistral AI; se a Mistral responder 429 (limite atingido), a pausa sobe para 60s. A chave é lida de `window.BibChaves.obter('mistral')` (tabela `config_privada`, chave `mistral_api_key`); sem ela, o botão exibe erro ao ser clicado.
 - *Validações em `iaCadastrarLivro` / `iaSalvarEdicao`:* categoria é campo obrigatório (erro "⚠️ INFORME A CATEGORIA" se vazio); após salvar, chama `window._atualizarAcervoImediato()` para atualizar o card em memória sem aguardar reload.
 - *Histórico (`_iaCarregarUltimosDoSupabase`):* busca 50 livros por `id DESC`, ordena no cliente por `GREATEST(data_edicao, data_cadastro)`, exibe os 5 primeiros; mescla com `localStorage` (`bibvania_ia_hist2`) para mostrar base64 temporária enquanto URL do ImgBB não carregou; chamado na inicialização da aba, após salvar e após editar.
 - *Ajuste rápido de quantidade (`iaSalvarQuantidadeRapida`):* atualiza apenas `quantidade_total` e `quantidade_disponivel` sem abrir edição completa.
@@ -393,11 +420,11 @@ O formulário de login é exibido em um overlay dentro de `admin.html`. A sessã
 
 ##### `bibmaker.claude`
 
-Arquivo construtor de bibliotecas — não é uma página web, e sim um arquivo lido pelo Claude numa conversa. Contém: seção "Como ativar" (baixar os arquivos-base, anexar o arquivo, digitar o comando `BibMaker` — case-insensitive); cabeçalho com identificação do projeto (nome, versão calculada automaticamente como versão base menos 0.1, descrição, repositório, licença); seção "Antes de Começar" com pré-requisitos; guia de como obter cada chave de API (Supabase, ImgBB, Mistral AI, GitHub); protocolo de preenchimento (regras internas seguidas pelo Claude); seção "Durante o Preenchimento" com os 5 blocos de cadastro (dados da biblioteca com campos condicionais por tipo escolar/comunitária, imagens obrigatórias (logo, favicon e OG Image), sem imagens padrão, chaves de API todas obrigatórias, dados do projeto e licença com herança automática de CC-BY-SA 4.0 quando o nome da licença fica vazio, descrição opcional para compartilhamento/Open Graph com fallback para a descrição padrão, GitHub); seção "Depois do Preenchimento" com os passos de configuração do Supabase, criação do usuário bibliotecário, publicação no GitHub Pages e geração do `bibconfig.claude` (configuração salva, com todas as respostas incluindo chaves de API, para permitir atualizações futuras sem repetir a entrevista — se um `bibconfig.claude` já for enviado junto na conversa, a entrevista é pulada e só os dados que mudaram são confirmados). Os campos "Versão do Projeto" e "Versão da Licença" seguem o formato `X.Y`, validado pelo próprio Claude durante a conversa.
+Arquivo construtor de bibliotecas — não é uma página web, e sim um arquivo lido pelo Claude numa conversa. Contém: seção "Como ativar" (baixar os arquivos-base, anexar o arquivo, digitar o comando `BibMaker` — case-insensitive); cabeçalho com identificação do projeto (nome, versão calculada automaticamente como versão base menos 0.3, descrição, repositório, licença); seção "Antes de Começar" com pré-requisitos; guia de como obter cada chave de API (Supabase, ImgBB, Mistral AI, GitHub); protocolo de preenchimento (regras internas seguidas pelo Claude); seção "Durante o Preenchimento" com os 5 blocos de cadastro (dados da biblioteca com campos condicionais por tipo escolar/comunitária, imagens obrigatórias (logo, favicon e OG Image), sem imagens padrão, chaves de API todas obrigatórias, dados do projeto e licença com herança automática de CC-BY-SA 4.0 quando o nome da licença fica vazio, descrição opcional para compartilhamento/Open Graph com fallback para a descrição padrão, GitHub); seção "Depois do Preenchimento" com os passos de configuração do Supabase, criação do usuário bibliotecário, publicação no GitHub Pages e geração do `bibconfig.claude` (configuração salva, com todas as respostas incluindo chaves de API, para permitir atualizações futuras sem repetir a entrevista — se um `bibconfig.claude` já for enviado junto na conversa, a entrevista é pulada e só os dados que mudaram são confirmados). Os campos "Versão do Projeto" e "Versão da Licença" seguem o formato `X.Y`, validado pelo próprio Claude durante a conversa.
 
 ##### `bibconfig.claude`
 
-Arquivo de configuração salva de uma biblioteca derivada — gerado (e regenerado a cada atualização) pelo `bibmaker.claude` ao final da entrevista. Contém todas as respostas dadas, inclusive as chaves de API. Fica fora da pasta principal do `.zip`, junto com o `setup_private.sql`, pelo mesmo motivo: nunca deve ser publicado no GitHub. Ao reabrir o `bibmaker.claude` junto com este arquivo numa conversa futura, a entrevista completa é dispensada — só os dados que mudaram (nova versão, nova chave, etc.) precisam ser confirmados. Serve tanto para atualizar a biblioteca com uma nova versão da BibVânia Online (arquivos-base) quanto para alterar a própria biblioteca derivada. Neste repositório-base, existe apenas como **modelo em branco** (todos os campos vazios) dentro da pasta principal — serve de referência/template; não é preenchido nem usado diretamente aqui. Nas bibliotecas derivadas, sai preenchido e vai para fora da pasta principal, ao lado do `setup_private.sql`.
+Arquivo de configuração salva de uma biblioteca derivada — gerado (e regenerado a cada atualização) pelo `bibmaker.claude` ao final da entrevista. Contém todas as respostas dadas, inclusive as chaves de API. Fica fora da pasta principal do `.zip`, junto com o `setup_private.sql`, pelo mesmo motivo: nunca deve ser publicado no GitHub. Ao reabrir o `bibmaker.claude` junto com este arquivo numa conversa futura, a entrevista completa é dispensada — só os dados que mudaram (nova versão, nova chave, etc.) precisam ser confirmados. Serve tanto para atualizar a biblioteca com uma nova versão da Geladeiroteca Online (arquivos-base) quanto para alterar a própria biblioteca derivada. Neste repositório-base, existe apenas como **modelo em branco** (todos os campos vazios) dentro da pasta principal — serve de referência/template; não é preenchido nem usado diretamente aqui. Nas bibliotecas derivadas, sai preenchido e vai para fora da pasta principal, ao lado do `setup_private.sql`.
 
 ##### `bibcore.js`
 
@@ -408,7 +435,7 @@ Folha de estilos global compartilhada por todas as páginas. Define os tokens de
 
 ##### `supabase_setup.sql`
 
-Script SQL completo para criação das tabelas, triggers, RLS, políticas e RPCs. Deve ser executado no SQL Editor do Supabase em um projeto novo; em instalações existentes, reaplique a versão atualizada para ativar reservas, recalcular o estoque das solicitações pendentes e publicar a busca por perfil. No final, o script solicita a recarga do cache de funções do PostgREST. Cria/configura `livros`, `emprestimos`, `pessoas`, `reservas`, `config_privada` e `livros_excluidos` (nome e foto do administrador ficam no `user_metadata` do Supabase Auth, sem tabela `admins`). Inclui migração automática de `pessoa_id` em empréstimos existentes e blocos idempotentes de migração de colunas. Não apaga a tabela de reservas ao reaplicar o arquivo.
+Script SQL completo para criação das tabelas, triggers, RLS, políticas e RPCs. Deve ser executado no SQL Editor do Supabase em um projeto novo; em instalações existentes, reaplique a versão atualizada para ativar reservas, recalcular o estoque das solicitações pendentes e publicar a busca por perfil. No final, o script solicita a recarga do cache de funções do PostgREST. Cria/configura `livros`, `emprestimos`, `pessoas`, `reservas`, `admins`, `config_privada` e `livros_excluidos`. Inclui migração automática de `pessoa_id` em empréstimos existentes e blocos idempotentes de migração de colunas. Não apaga a tabela de reservas ao reaplicar o arquivo.
 
 ##### `setup_private.sql`
 
@@ -416,7 +443,7 @@ Script SQL para inserção das chaves de API privadas (`imgbb_api_key`, `mistral
 
 ##### `bibhash.sig`
 
-Assinatura SHA-256 de integridade do ZIP do projeto (da BibVânia Online ou de uma biblioteca derivada). Formato: SHA-256 hex puro (64 caracteres), sem prefixo, sem newline. Calculada sobre todos os arquivos do ZIP em ordem alfabética; único arquivo excluído do cálculo: `bibhash.sig` (evita referência circular). Método exato: extrair ZIP, remover `bibhash.sig`, executar `LC_ALL=C find . -type f | sort | xargs sha256sum | sha256sum`; gravar resultado com `echo -n`. Paths incluem prefixo `./`; sort é byte-order (LC\_ALL=C). Regenerada pela IA após qualquer modificação ao ZIP. Em caso de divergência ao receber o ZIP, a IA exibe o hash calculado vs. o armazenado e não prossegue com nenhuma ação até confirmação explícita. Cada biblioteca gerada pelo `bibmaker.claude` tem o seu próprio `bibhash.sig`, calculado pelo mesmo método sobre a pasta do projeto da biblioteca (o `setup_private.sql` e o `bibconfig.claude` ficam fora da pasta e, portanto, fora do cálculo) e gerado por último, depois de todos os arquivos finais, em toda criação ou atualização. O `bibhash.sig` da BibVânia Online não vale para a biblioteca derivada.
+Assinatura SHA-256 de integridade do ZIP do projeto (da Geladeiroteca Online ou de uma biblioteca derivada). Formato: SHA-256 hex puro (64 caracteres), sem prefixo, sem newline. Calculada sobre todos os arquivos do ZIP em ordem alfabética; único arquivo excluído do cálculo: `bibhash.sig` (evita referência circular). Método exato: extrair ZIP, remover `bibhash.sig`, executar `LC_ALL=C find . -type f | sort | xargs sha256sum | sha256sum`; gravar resultado com `echo -n`. Paths incluem prefixo `./`; sort é byte-order (LC\_ALL=C). Regenerada pela IA após qualquer modificação ao ZIP. Em caso de divergência ao receber o ZIP, a IA exibe o hash calculado vs. o armazenado e não prossegue com nenhuma ação até confirmação explícita. Cada biblioteca gerada pelo `bibmaker.claude` tem o seu próprio `bibhash.sig`, calculado pelo mesmo método sobre a pasta do projeto da biblioteca (o `setup_private.sql` e o `bibconfig.claude` ficam fora da pasta e, portanto, fora do cálculo) e gerado por último, depois de todos os arquivos finais, em toda criação ou atualização. O `bibhash.sig` da Geladeiroteca Online não vale para a biblioteca derivada.
 
 ##### `VERSION.json`
 
@@ -431,6 +458,8 @@ Licença CC-BY-SA-4.0. Cobre todo o código, assets originais e documentação. 
 Documentação de instalação e uso voltada ao GitHub. Inclui pré-requisitos e passo a passo de configuração do Supabase. Não possui seção de changelog/histórico de mudanças. Na biblioteca derivada, é gerado pelo `bibmaker.claude` como cópia deste README, substituindo apenas nome e links.
 
 #### Arquitetura técnica resumida
+
+* **Rodapé por modalidade:** os três rodapés (`index.html`, login e painel) montam sua descrição a partir das metatags comuns `tipobib`, `denominacaoescola`, `nomeescola` e `nomebiblioteca`. Bibliotecas escolares exibem a denominação da escola e o nome oficial; comunitárias exibem "biblioteca comunitária" seguido do nome, sem duplicar esse prefixo quando já estiver preenchido no cadastro.
 
 * **Dois sistemas de script por página:** cada HTML carrega `bibcore.js` como ES Module (`<script type="module">`) e um bloco UMD síncrono logo após. Funções acessadas via `onclick` devem ser expostas em `window.*` pelo módulo.
 * **Transição de página:** função `window.navegarCom(url)` exibe um overlay fixo com logo (80×auto, animação de escala 0.6s), 3 bolinhas (10×10px, animação de salto 0.9s com delays escalonados de 0.3s), fundo com cor `var(--bg)`, opacity 0, pointer-events none. Ao chamar `navegarCom()`, a classe `ativo` liga opacity/pointer-events, aguarda 140ms e redireciona. No evento `pageshow` (inclui bfcache do navegador), remove a classe para fade-out 0.1s.
@@ -464,9 +493,9 @@ Documentação de instalação e uso voltada ao GitHub. Inclui pré-requisitos e
 
 #### Segurança das chaves de API
 
-O BibVânia Online utiliza chaves de API para integrar serviços externos (ImgBB e Mistral AI). Siga estas boas práticas:
+O Geladeiroteca Online utiliza chaves de API para integrar serviços externos (ImgBB e Mistral AI). Siga estas boas práticas:
 
-* No Supabase Auth, desative o cadastro público de novos usuários (Authentication → Sign In / Providers → "Allow new users to sign up" desligado) e crie administradores manualmente em Authentication → Users. Quem está logado já é administrador; não há tabela `admins`.
+* No Supabase Auth, desative o cadastro público de novos usuários; crie os administradores manualmente em Authentication → Users (quem está logado já é administrador).
 * Nunca adicione chaves de API diretamente em arquivos HTML ou JS que vão para o repositório público. Use a tabela `config_privada` no Supabase para armazená-las com segurança (conforme o arquivo `setup_private.sql`).
 * Rotacione as chaves periodicamente ou sempre que suspeitar de uso indevido.
 * No painel de cada serviço, configure limites de uso (rate limits) para evitar cobranças inesperadas.
@@ -483,7 +512,7 @@ O BibVânia Online utiliza chaves de API para integrar serviços externos (ImgBB
 
 * Verifique mensalmente o uso do banco de dados no painel do Supabase. O plano gratuito tem limite de 500 MB de armazenamento e 50.000 requisições por mês.
 * Ative notificações por e-mail no Supabase para ser avisado sobre pausas automáticas do projeto.
-* Antes de aplicar qualquer alteração em produção, teste em uma instância separada do BibVânia Online (criada com o bibmaker.claude usando outro projeto Supabase). Nunca execute scripts SQL em produção sem antes validar em ambiente de teste.
+* Antes de aplicar qualquer alteração em produção, teste em uma instância separada do Geladeiroteca Online (criada com o bibmaker.claude usando outro projeto Supabase). Nunca execute scripts SQL em produção sem antes validar em ambiente de teste.
 
 </details>
 
@@ -492,7 +521,7 @@ O BibVânia Online utiliza chaves de API para integrar serviços externos (ImgBB
 
 ## Configuração inicial (instalação direta deste repositório)
 
-> Estes passos são para quem vai rodar **este repositório-base** diretamente (o próprio Ruan mantendo a BibVânia Online). Se você quer gerar sua **própria biblioteca derivada**, use o [`bibmaker.claude`](#como-criar-uma-biblioteca) — ele automatiza tudo isso.
+> Estes passos são para quem vai rodar **este repositório-base** diretamente (o próprio Ruan mantendo a Geladeiroteca Online). Se você quer gerar sua **própria biblioteca derivada**, use o [`bibmaker.claude`](#como-criar-uma-biblioteca) — ele automatiza tudo isso.
 
 ### 1. Criar projeto no Supabase
 
@@ -527,23 +556,34 @@ window.BIBVANIA_CONFIG = {
 
 1. No Supabase, vá em **Authentication → Users**
 2. Clique em **Add user** e informe e-mail e senha
-3. Quem está logado já é administrador. Opcionalmente, para gerenciar o nome (username) exibido no painel, copie o UUID do usuário (coluna **User UID**) e rode **uma linha por vez** no **SQL Editor**, substituindo `UUID_DO_USUARIO` e o nome (tire o `-- ` só da linha desejada):
+3. Copie o **User UID** do usuário criado (coluna na lista de usuários).
+4. O username é opcional e aparece no painel ("OI, nome!", só o primeiro nome); sem ele, o painel mostra "OLÁ, ADMIN!". Para colocar, trocar ou excluir, execute no **SQL Editor**:
+
+Para cada ação abaixo, substitua `UUID_DO_USUARIO` pelo valor da coluna **User UID** (*Authentication → Users*) e execute **uma por vez**:
+
+**Colocar o username** (quando ainda não há nome definido):
 
 ```sql
--- 1) COLOCAR o username (quando ainda não há nome definido)
--- UPDATE auth.users SET raw_user_meta_data = coalesce(raw_user_meta_data, '{}'::jsonb) || '{"nome":"Nome"}' WHERE id = 'UUID_DO_USUARIO';
-
--- 2) TROCAR o username (quando já há um nome definido)
--- UPDATE auth.users SET raw_user_meta_data = coalesce(raw_user_meta_data, '{}'::jsonb) || '{"nome":"Novo Nome"}' WHERE id = 'UUID_DO_USUARIO';
-
--- 3) EXCLUIR o username (volta a mostrar "OLÁ, ADMIN!"; foto e login não mudam)
--- UPDATE auth.users SET raw_user_meta_data = raw_user_meta_data - 'nome' WHERE id = 'UUID_DO_USUARIO';
-
--- CONFERIR o resultado
--- SELECT id, email, raw_user_meta_data->>'nome' AS nome FROM auth.users WHERE id = 'UUID_DO_USUARIO';
+UPDATE auth.users SET raw_user_meta_data = coalesce(raw_user_meta_data, '{}'::jsonb) || '{"nome":"Nome"}' WHERE id = 'UUID_DO_USUARIO';
 ```
 
-Os comandos 1 e 2 são idênticos (criam o nome se não existe e trocam se já existe). Recarregue o painel com F5 depois de rodar; se o nome antigo continuar aparecendo, saia e entre de novo.
+**Trocar o username** (quando já há um nome definido):
+
+```sql
+UPDATE auth.users SET raw_user_meta_data = coalesce(raw_user_meta_data, '{}'::jsonb) || '{"nome":"Novo Nome"}' WHERE id = 'UUID_DO_USUARIO';
+```
+
+**Excluir o username** (o painel volta a mostrar "OLÁ, ADMIN!"; foto e login não mudam):
+
+```sql
+UPDATE auth.users SET raw_user_meta_data = raw_user_meta_data - 'nome' WHERE id = 'UUID_DO_USUARIO';
+```
+
+**Conferir o resultado:**
+
+```sql
+SELECT id, email, raw_user_meta_data->>'nome' AS nome FROM auth.users WHERE id = 'UUID_DO_USUARIO';
+```
 
 ### 6. Publicar no GitHub Pages
 
