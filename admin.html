@@ -388,7 +388,7 @@ html.admin-login-locked, body.admin-login-locked { overflow: hidden !important; 
         <div id="adminLoginContent" aria-hidden="true">
             <div id="adminLoginBox">
             <img src="logo.png" alt="Logo Geladeiroteca Online">
-            <h1>BIBVÂNIA ONLINE</h1>
+            <h1 data-nome-projeto>GELADEIROTECA ONLINE</h1>
             <div class="school-name" id="nomeEscolaLogin" aria-hidden="true"><span></span><span></span></div>
             <script>
                 function _ajustarNomeEscolaLogin() {
@@ -448,7 +448,7 @@ html.admin-login-locked, body.admin-login-locked { overflow: hidden !important; 
                 <img id="menuAtalhosFavicon" src="favicon.png" alt="" aria-hidden="true" style="width:20px;height:20px;border-radius:4px;object-fit:contain;flex-shrink:0;"> <span class="menu-atalhos-chevron" aria-hidden="true">▼</span>
             </button>
             <div class="menu-atalhos-lista" role="menu">
-                <button class="menu-atalhos-item" role="menuitem" onclick="window.open('https://github.com/limaoruan/bibvania','_blank','noopener,noreferrer');fecharMenuAtalhos()">
+                <button class="menu-atalhos-item" role="menuitem" onclick="window.open('https://github.com/emtivania/geladeiroteca','_blank','noopener,noreferrer');fecharMenuAtalhos()">
                     <span class="menu-atalhos-item-emoji">📁</span> Repositório
                 </button>
                 <button class="menu-atalhos-item" role="menuitem" onclick="navegarComTransicao('index.html');fecharMenuAtalhos()">
@@ -594,7 +594,23 @@ html.admin-login-locked, body.admin-login-locked { overflow: hidden !important; 
 
 <header role="banner" aria-label="Cabeçalho">
         <img src="logo.png" alt="Logo Geladeiroteca Online — Sistema de Biblioteca Móvel" class="header-logo" fetchpriority="high" onerror="(function(img){var t=0;var fn=function(){if(t<3){t++;img.src=img.src.split('?')[0]+'?r='+t;img.onerror=fn}else{img.onerror=null;img.style.display='none'}};img.onerror=fn;fn()})(this)">
-        <h1>BIBVÂNIA ONLINE</h1>
+        <h1 data-nome-projeto>GELADEIROTECA ONLINE</h1>
+        <script>
+            // Título do cabeçalho (abaixo da logo): usa o Nome do Projeto da meta "nomeprojeto" (preenchida pelo BibMaker
+            // com o nome da biblioteca). O texto escrito no <h1> é a reserva para quando a meta estiver vazia ou o
+            // JavaScript estiver desligado. Também ajusta o texto alternativo da logo que vem logo antes do título.
+            (function(){
+                var m = document.querySelector('meta[name="nomeprojeto"]');
+                var nome = ((m && m.getAttribute('content')) || '').trim();
+                if (!nome) return;
+                var titulos = document.querySelectorAll('h1[data-nome-projeto]');
+                for (var i = 0; i < titulos.length; i++) {
+                    titulos[i].textContent = nome.toUpperCase();
+                    var logo = titulos[i].previousElementSibling;
+                    if (logo && logo.tagName === 'IMG') logo.alt = 'Logo ' + nome;
+                }
+            })();
+        </script>
         <div class="school-name" id="nomeEscolaAdmin" aria-label="Biblioteca Móvel da EMTI Professora Maria Vânia Farias Linhares"><span></span><span></span></div>
         <script>
             (function(){
@@ -1045,7 +1061,7 @@ html.admin-login-locked, body.admin-login-locked { overflow: hidden !important; 
             </div>
             <div id="relHeaderEstatico" style="font-family:system-ui,-apple-system,sans-serif;text-align:center;padding:0.75rem 0 0.5rem;margin-bottom:0.25rem;">
                 <img src="logo.png" alt="Geladeiroteca Online" style="height:2rem;width:auto;display:block;margin:0 auto 0.3rem;" width="64" height="32" onerror="(function(img){var t=0;var fn=function(){if(t<3){t++;img.src=img.src.split('?')[0]+'?r='+t;img.onerror=fn}else{img.onerror=null;img.style.display='none'}};img.onerror=fn;fn()})(this)">
-                <div id="relPreviewNome" style="font-size:0.85rem;font-weight:800;color:var(--primary);letter-spacing:0.04em;">BIBVÂNIA ONLINE</div>
+                <div id="relPreviewNome" style="font-size:0.85rem;font-weight:800;color:var(--primary);letter-spacing:0.04em;">GELADEIROTECA ONLINE</div>
                 <div id="relPreviewSub" style="font-size:0.72rem;color:var(--text-light);margin-top:0.1rem;line-height:1.5;">Biblioteca Móvel da EMTI<br>Professora Maria Vânia Farias Linhares</div>
                 <script>(function(){
                     var m1=document.querySelector('meta[name="nomeesc1"]');

@@ -102,6 +102,7 @@
     <meta name="denominacaoescola" content="EMTI">
     <meta name="nomeescola" content="Professora Maria Vânia Farias Linhares">
     <meta name="nomebiblioteca" content="">
+    <meta name="nomeprojeto" content="Geladeiroteca Online">
     <meta name="versaobase" content="">
     <link rel="icon" href="favicon.ico" sizes="any">
     <link rel="icon" type="image/png" sizes="16x16" href="favicon-16.png">
@@ -197,7 +198,7 @@
                 <img id="menuAtalhosFavicon" src="favicon.png" alt="" aria-hidden="true" style="width:20px;height:20px;border-radius:4px;object-fit:contain;flex-shrink:0;"> <span class="menu-atalhos-chevron" aria-hidden="true">▼</span>
             </button>
             <div class="menu-atalhos-lista" role="menu">
-                <button class="menu-atalhos-item" role="menuitem" onclick="window.open('https://github.com/limaoruan/bibvania','_blank','noopener,noreferrer');fecharMenuAtalhos()">
+                <button class="menu-atalhos-item" role="menuitem" onclick="window.open('https://github.com/emtivania/geladeiroteca','_blank','noopener,noreferrer');fecharMenuAtalhos()">
                     <span class="menu-atalhos-item-emoji">📁</span> Repositório
                 </button>
                 <button class="menu-atalhos-item" role="menuitem" onclick="irParaAdmin();fecharMenuAtalhos()">
@@ -232,7 +233,23 @@
 
 <header role="banner" aria-label="Cabeçalho">
         <img src="logo.png" alt="Logo Geladeiroteca Online — Sistema de Biblioteca Móvel" class="header-logo" fetchpriority="high" onerror="(function(img){var t=0;var fn=function(){if(t<3){t++;img.src=img.src.split('?')[0]+'?r='+t;img.onerror=fn}else{img.onerror=null;img.style.display='none'}};img.onerror=fn;fn()})(this)">
-        <h1>BIBVÂNIA ONLINE</h1>
+        <h1 data-nome-projeto>GELADEIROTECA ONLINE</h1>
+        <script>
+            // Título do cabeçalho (abaixo da logo): usa o Nome do Projeto da meta "nomeprojeto" (preenchida pelo BibMaker
+            // com o nome da biblioteca). O texto escrito no <h1> é a reserva para quando a meta estiver vazia ou o
+            // JavaScript estiver desligado. Também ajusta o texto alternativo da logo que vem logo antes do título.
+            (function(){
+                var m = document.querySelector('meta[name="nomeprojeto"]');
+                var nome = ((m && m.getAttribute('content')) || '').trim();
+                if (!nome) return;
+                var titulos = document.querySelectorAll('h1[data-nome-projeto]');
+                for (var i = 0; i < titulos.length; i++) {
+                    titulos[i].textContent = nome.toUpperCase();
+                    var logo = titulos[i].previousElementSibling;
+                    if (logo && logo.tagName === 'IMG') logo.alt = 'Logo ' + nome;
+                }
+            })();
+        </script>
         <div class="school-name" id="nomeEscolaExibicao" aria-label="Biblioteca Móvel da EMTI Professora Maria Vânia Farias Linhares"><span>BIBLIOTECA ESCOLAR DA EMTI</span><span>PROFESSORA MARIA VÂNIA FARIAS LINHARES</span></div>
     </header>
 
@@ -1528,7 +1545,8 @@
         const _spans = _escEl ? Array.from(_escEl.querySelectorAll('span')).map(s => s.textContent.trim()).filter(Boolean) : [];
         const _m1 = document.querySelector('meta[name="nomeesc1"]')?.getAttribute('content')?.trim() || '';
         const _m2 = document.querySelector('meta[name="nomeesc2"]')?.getAttribute('content')?.trim() || '';
-        const _nomeProjeto = (document.querySelector('meta[name="nomeprojeto"]')?.getAttribute('content')?.trim() || 'Geladeiroteca Online').toUpperCase();
+        const _nomeProjetoBruto = document.querySelector('meta[name="nomeprojeto"]')?.getAttribute('content')?.trim() || 'Geladeiroteca Online';
+        const _nomeProjeto = _nomeProjetoBruto.toUpperCase();
         const _linha1Esc = _spans[0] || _m1 || (_escEl?.innerText?.split('\n')[0]?.trim()) || 'Biblioteca Móvel';
         const _linha2Esc = _spans[1] || _m2 || (_escEl?.innerText?.split('\n')[1]?.trim()) || '';
         const agora = new Date().toLocaleDateString('pt-BR') + ' ' + new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
@@ -1552,7 +1570,7 @@
         try {
             pdfMake.createPdf({
                 pageSize:'A4', pageOrientation:'landscape', pageMargins:[40,40,40,40],
-                footer:(page,pages)=>({text:'Página '+page+' de '+pages+'  |  Geladeiroteca Online',fontSize:6,color:'#94a3b8',alignment:'center',margin:[0,0,0,10]}),
+                footer:(page,pages)=>({text:'Página '+page+' de '+pages+'  |  '+_nomeProjetoBruto,fontSize:6,color:'#94a3b8',alignment:'center',margin:[0,0,0,10]}),
                 content:[...headerContent,{text:' ',fontSize:4},{
                     table:{headerRows:1,widths:[28,'*','*',72,95,30,52],
                         body:[
